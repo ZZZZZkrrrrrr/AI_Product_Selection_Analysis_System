@@ -1167,6 +1167,9 @@ function buildOverview(options) {
   const statusRuns = runs.filter((run) => run.status_counted !== false);
   const failingRuns = statusRuns.filter((run) => !run.status_ok);
   const discoveredRuns = overriddenPlan.sources.filter((source) => source.discovered === true);
+  const unknownOverrideCount = Array.isArray(overriddenPlan.overrideSummary?.unknown_ids)
+    ? overriddenPlan.overrideSummary.unknown_ids.length
+    : 0;
   return {
     ok: failingRuns.length === 0,
     generated_at: generatedAt,
@@ -1189,6 +1192,7 @@ function buildOverview(options) {
       attention: failingRuns.length,
       discovered: discoveredRuns.length,
       excluded_from_status: runs.length - statusRuns.length,
+      unknown_overrides: unknownOverrideCount,
     },
     freshness: overviewFreshness(runs, generatedAt, freshnessThresholdHours),
     freshness_config: freshnessConfig,
@@ -1607,6 +1611,7 @@ function renderHtml(overview) {
       <article class="metric"><span>需关注</span><strong>${htmlEscape(overview.counts.attention)}</strong></article>
       <article class="metric"><span>自动发现</span><strong>${htmlEscape(overview.counts.discovered ?? 0)}</strong></article>
       <article class="metric"><span>未计入总状态</span><strong>${htmlEscape(overview.counts.excluded_from_status ?? 0)}</strong></article>
+      <article class="metric"><span>未知覆盖</span><strong>${htmlEscape(overview.counts.unknown_overrides ?? unknownOverrideIds.length)}</strong></article>
     </section>
     <section
       class="freshness ${htmlEscape(freshness.status_class || 'muted')}"

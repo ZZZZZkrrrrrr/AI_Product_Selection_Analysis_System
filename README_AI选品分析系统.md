@@ -228,7 +228,7 @@ node tools/run_local_regression_checks.mjs --strict-n8n-api
 
 自动发现的 `local_regression_*.json` 回归项可以在本地回归配置里覆盖展示名称、角色、预期失败状态和是否计入总状态。路径覆盖不开放，避免配置误指向其他文件。
 
-如果 `regression_overrides` 配置了当前不存在的回归项 id，校验和总览会显示“未知覆盖 id”提示，但不会阻断回归。这适合先预留未来回归项配置，等对应 `local_regression_<id>.json` 生成后自动生效。
+如果 `regression_overrides` 配置了当前不存在的回归项 id，校验和总览会显示“未知覆盖 id”提示，但不会阻断回归。这适合先预留未来回归项配置，等对应 `local_regression_<id>.json` 生成后自动生效。统一回归总览的摘要指标也会显示“未知覆盖”数量，打开首页就能判断是否有预留项还没有生成。
 
 ```json
 {
