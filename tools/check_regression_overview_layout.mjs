@@ -215,6 +215,8 @@ function metricsExpression() {
     const visibleHeader = isVisible(document.querySelector('header h1'));
     const visibleBadge = isVisible(document.querySelector('.badge'));
     const visibleMetrics = Array.from(document.querySelectorAll('.metric')).filter(isVisible).length;
+    const visibleOperationalReadiness = isVisible(document.querySelector('.ops-readiness'));
+    const visibleOperationalFacts = Array.from(document.querySelectorAll('.ops-facts span')).filter(isVisible).length;
     const visibleFreshness = isVisible(document.querySelector('.freshness'));
     const visibleCommandPanel = isVisible(document.querySelector('.command-panel'));
     const visibleServiceHealth = isVisible(document.querySelector('.service-health'));
@@ -251,6 +253,8 @@ function metricsExpression() {
       visibleHeader,
       visibleBadge,
       visibleMetrics,
+      visibleOperationalReadiness,
+      visibleOperationalFacts,
       visibleFreshness,
       visibleCommandPanel,
       visibleServiceHealth,
@@ -262,6 +266,7 @@ function metricsExpression() {
       visibleRunFacts,
       visibleLinks,
       hasUnknownOverrideMetric: textIncludes('未知覆盖'),
+      hasOperationalReadinessText: textIncludes('运维结论') && (textIncludes('可继续使用') || textIncludes('需关注')),
       hasAuthorizationSource: textIncludes('授权来源') && (textIncludes('已保存 Windows 凭据') || textIncludes('环境变量 N8N_API_KEY') || textIncludes('未配置')),
       hasDataSourceText: textIncludes('数据源健康'),
       hasRegressionCardText: textIncludes('默认回归') || textIncludes('桌面回归') || textIncludes('多视口回归'),
@@ -279,6 +284,9 @@ function buildChecks(metrics) {
     { name: 'status badge visible', ok: metrics.visibleBadge === true },
     { name: 'summary metrics visible', ok: metrics.visibleMetrics >= 6 },
     { name: 'unknown override metric visible', ok: metrics.hasUnknownOverrideMetric === true },
+    { name: 'operational readiness visible', ok: metrics.visibleOperationalReadiness === true },
+    { name: 'operational readiness facts visible', ok: metrics.visibleOperationalFacts >= 4 },
+    { name: 'operational readiness text visible', ok: metrics.hasOperationalReadinessText === true },
     { name: 'freshness panel visible', ok: metrics.visibleFreshness === true },
     { name: 'rerun command panel visible', ok: metrics.visibleCommandPanel === true },
     { name: 'n8n service status visible', ok: metrics.visibleServiceHealth === true },
@@ -403,6 +411,7 @@ function printHuman(result) {
   lines.push(`- regression cards: ${result.metrics.visibleRunCards}`);
   lines.push(`- regression facts: ${result.metrics.visibleRunFacts}`);
   lines.push(`- unknown override metric: ${result.metrics.hasUnknownOverrideMetric ? 'yes' : 'no'}`);
+  lines.push(`- operational readiness: ${result.metrics.hasOperationalReadinessText ? 'yes' : 'no'}`);
   lines.push(`- authorization source: ${result.metrics.hasAuthorizationSource ? 'yes' : 'no'}`);
   lines.push(`- overflowing nodes: ${result.metrics.overflowingNodes.length}`);
   lines.push('');

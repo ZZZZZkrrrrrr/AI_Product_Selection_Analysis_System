@@ -991,6 +991,13 @@ function cacheSummary(data) {
   return data.strict_cache ? '严格失败' : '失败';
 }
 
+function stepStatus(data, stepId) {
+  const step = Array.isArray(data?.steps) ? data.steps.find((item) => item.id === stepId) : null;
+  if (!step) return { checked: false, ok: false, skipped: false, status: '未检查' };
+  if (step.skipped) return { checked: true, ok: true, skipped: true, status: '跳过' };
+  return { checked: true, ok: step.ok === true, skipped: false, status: step.ok ? '通过' : '失败' };
+}
+
 function freshnessForTimestamp(timestampText, exists, thresholdHours) {
   if (!exists) {
     return {
@@ -1082,6 +1089,47 @@ function overviewFreshness(runs, generatedAt, thresholdHours) {
   };
 }
 
+function operationalReadinessSummary({ failingRuns, freshness, n8nStatus, dataSourceHealth, defaultRun }) {
+  const issues = [];
+  const confirmations = [];
+  const overviewLayout = defaultRun?.overview_layout_checks || {};
+
+  if (failingRuns.length) issues.push(`有 ${failingRuns.length} 项计入总状态的回归需要关注`);
+  else confirmations.push('回归总状态通过');
+
+  if (freshness?.status_class === 'ok') confirmations.push('回归结果仍在新鲜度窗口内');
+  else issues.push(`回归新鲜度为 ${freshness?.status || '暂无'}`);
+
+  if (n8nStatus?.ok === false) issues.push(`n8n 服务状态为 ${n8nStatus.status || '异常'}`);
+  else confirmations.push('n8n 页面和本地爬虫可用');
+
+  if (n8nStatus?.authorization_ok === true) confirmations.push('n8n API 已授权');
+  else issues.push('n8n API 未授权或未检查');
+
+  if (dataSourceHealth?.ok === false) issues.push(`数据源健康为 ${dataSourceHealth.status || '需关注'}`);
+  else confirmations.push('数据源配置健康');
+
+  if (overviewLayout.mobile?.ok) confirmations.push('统一回归总览移动端布局通过');
+  else issues.push('统一回归总览移动端布局未通过或未检查');
+
+  if (defaultRun?.desktop_width_text && defaultRun.desktop_width_text !== '未检查') {
+    if (overviewLayout.desktop?.ok) confirmations.push('统一回归总览桌面布局通过');
+    else issues.push('统一回归总览桌面布局未通过或未检查');
+  }
+
+  return {
+    ok: issues.length === 0,
+    status: issues.length === 0 ? '可继续使用' : '需关注',
+    status_class: issues.length === 0 ? 'ok' : 'warn',
+    message:
+      issues.length === 0
+        ? '本地回归、n8n 授权、数据源配置和总览布局均可参考，可以继续使用当前 V1.0 流程。'
+        : '存在需要处理的运维项，建议先按下方问题修复后再用结果做选品决策。',
+    confirmations,
+    issues,
+  };
+}
+
 function rerunCommands() {
   return [
     {
@@ -1159,6 +1207,10 @@ function buildOverview(options) {
       desktop_width_text: formatDesktop(data),
       strict_cache: data.strict_cache === true,
       cache_status: cacheSummary(data),
+      overview_layout_checks: {
+        mobile: stepStatus(data, 'local_regression_overview_mobile_layout'),
+        desktop: stepStatus(data, 'local_regression_overview_desktop_layout'),
+      },
       error: result.error,
     };
   });
@@ -1170,6 +1222,17 @@ function buildOverview(options) {
   const unknownOverrideCount = Array.isArray(overriddenPlan.overrideSummary?.unknown_ids)
     ? overriddenPlan.overrideSummary.unknown_ids.length
     : 0;
+  const dataSourceHealthSummary = summarizeDataSources(dataSourcesPath);
+  const n8nStatusSummary = summarizeN8nStatus(defaultN8nStatusPath);
+  const freshness = overviewFreshness(runs, generatedAt, freshnessThresholdHours);
+  const defaultRun = runs.find((run) => run.id === 'default') || null;
+  const operationalReadiness = operationalReadinessSummary({
+    failingRuns,
+    freshness,
+    n8nStatus: n8nStatusSummary,
+    dataSourceHealth: dataSourceHealthSummary,
+    defaultRun,
+  });
   return {
     ok: failingRuns.length === 0,
     generated_at: generatedAt,
@@ -1178,9 +1241,10 @@ function buildOverview(options) {
     local_regression_config_path: freshnessConfig.configPath,
     data_source_config_path: dataSourcesPath,
     data_source_config_exists: fs.existsSync(dataSourcesPath),
-    data_source_health_summary: summarizeDataSources(dataSourcesPath),
+    data_source_health_summary: dataSourceHealthSummary,
     n8n_status_path: defaultN8nStatusPath,
-    n8n_status_summary: summarizeN8nStatus(defaultN8nStatusPath),
+    n8n_status_summary: n8nStatusSummary,
+    operational_readiness: operationalReadiness,
     output_dir: outputDir,
     summary_path: defaultJsonPath,
     html_report_path: defaultHtmlPath,
@@ -1194,7 +1258,7 @@ function buildOverview(options) {
       excluded_from_status: runs.length - statusRuns.length,
       unknown_overrides: unknownOverrideCount,
     },
-    freshness: overviewFreshness(runs, generatedAt, freshnessThresholdHours),
+    freshness,
     freshness_config: freshnessConfig,
     regression_overrides: overriddenPlan.overrideSummary,
     rerun_commands: rerunCommands(),
@@ -1251,6 +1315,7 @@ function renderHtml(overview) {
   const dataSourceHealth = overview.data_source_health_summary || null;
   const dataSourceValidation = config.data_source_validation || null;
   const n8nStatus = overview.n8n_status_summary || null;
+  const operationalReadiness = overview.operational_readiness || null;
   const n8nStatusPath = overview.n8n_status_path || defaultN8nStatusPath;
   const dataSourceMessages = [
     ...(Array.isArray(dataSourceValidation?.errors) ? dataSourceValidation.errors : []),
@@ -1385,6 +1450,30 @@ function renderHtml(overview) {
                 )
                 .join('')}
             </div>`
+          : ''
+      }
+    </section>`
+    : '';
+  const operationalPanel = operationalReadiness
+    ? `
+    <section class="ops-readiness ${htmlEscape(operationalReadiness.status_class || 'muted')}" aria-label="运维可用结论">
+      <div class="ops-head">
+        <div>
+          <strong>运维结论</strong>
+          <p>${htmlEscape(operationalReadiness.message || '暂无运维结论。')}</p>
+        </div>
+        <b>${htmlEscape(operationalReadiness.status || '暂无')}</b>
+      </div>
+      ${
+        Array.isArray(operationalReadiness.confirmations) && operationalReadiness.confirmations.length
+          ? `<div class="ops-facts">
+              ${operationalReadiness.confirmations.map((item) => `<span>${htmlEscape(item)}</span>`).join('')}
+            </div>`
+          : ''
+      }
+      ${
+        Array.isArray(operationalReadiness.issues) && operationalReadiness.issues.length
+          ? `<ul class="ops-issues">${operationalReadiness.issues.map((item) => `<li>${htmlEscape(item)}</li>`).join('')}</ul>`
           : ''
       }
     </section>`
@@ -1540,6 +1629,18 @@ function renderHtml(overview) {
     .service-action { border: 1px solid #fcd34d; border-radius: 8px; background: #fffdf2; padding: 10px; min-width: 0; }
     .service-action strong { display: block; margin-bottom: 6px; }
     .service-action p { overflow-wrap: anywhere; }
+    .ops-readiness { border: 1px solid var(--line); border-radius: 8px; background: #fff; padding: 14px; margin: 14px 0; }
+    .ops-readiness.ok { border-color: #bbf7d0; }
+    .ops-readiness.warn { border-color: #fcd34d; background: #fffbeb; }
+    .ops-head { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; align-items: start; }
+    .ops-head strong { display: block; font-size: 16px; }
+    .ops-head b { border-radius: 999px; padding: 5px 10px; background: #f1f5f9; }
+    .ops-readiness.ok .ops-head b { background: #dcfce7; color: var(--ok); }
+    .ops-readiness.warn .ops-head b { background: #fef3c7; color: var(--skip); }
+    .ops-facts { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+    .ops-facts span { border: 1px solid #dce3ee; border-radius: 999px; background: #f8fafc; color: #475569; padding: 6px 10px; font-size: 12px; font-weight: 800; }
+    .ops-issues { margin: 10px 0 0; padding-left: 20px; color: #7a5c00; }
+    .ops-issues li { margin: 4px 0; overflow-wrap: anywhere; }
     .source-health { border: 1px solid var(--line); border-radius: 8px; background: #fff; padding: 14px; margin: 14px 0; }
     .source-health.ok { border-color: #bbf7d0; }
     .source-health.warn { border-color: #fecaca; background: #fff7f7; }
@@ -1584,6 +1685,8 @@ function renderHtml(overview) {
       .command-head, .command-cwd, .command-grid { grid-template-columns: 1fr; }
       .service-head, .service-actions { grid-template-columns: 1fr; }
       .service-facts { display: grid; grid-template-columns: minmax(0, 1fr); }
+      .ops-head { grid-template-columns: 1fr; }
+      .ops-facts { display: grid; grid-template-columns: minmax(0, 1fr); }
       .source-head { grid-template-columns: 1fr; }
       .source-actions { grid-template-columns: 1fr; }
       .source-facts, .source-grid { display: grid; grid-template-columns: minmax(0, 1fr); }
@@ -1613,6 +1716,7 @@ function renderHtml(overview) {
       <article class="metric"><span>未计入总状态</span><strong>${htmlEscape(overview.counts.excluded_from_status ?? 0)}</strong></article>
       <article class="metric"><span>未知覆盖</span><strong>${htmlEscape(overview.counts.unknown_overrides ?? unknownOverrideIds.length)}</strong></article>
     </section>
+    ${operationalPanel}
     <section
       class="freshness ${htmlEscape(freshness.status_class || 'muted')}"
       aria-label="回归新鲜度"
