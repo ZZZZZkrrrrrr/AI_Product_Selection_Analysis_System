@@ -37,10 +37,10 @@ function usage() {
     '  node tools/run_local_regression_checks.mjs --desktop --desktop-width 1440',
     '  node tools/run_local_regression_checks.mjs --no-overview',
     '',
-    'Runs local read-only regression checks: data source health, adapter fixtures, optional cache directory, overview mobile layout, and latest product mobile layout.',
+    'Runs local read-only regression checks: data source health, adapter fixtures, optional cache directory, product overview layout, latest product layout, local regression summary layout, and unified regression overview layout.',
     'It validates local regression configuration first and stops early when the config is invalid.',
     'Default mobile layout checks run at 390px. Use --multi-viewport to cover 360px, 390px, and 414px.',
-    '--desktop adds overview, latest product, and local regression summary desktop layout checks at 1366px by default.',
+    '--desktop adds product overview, latest product, local regression summary, and unified regression overview desktop layout checks at 1366px by default.',
     'It writes both a JSON summary and a lightweight HTML summary by default.',
     'It refreshes local_regression_overview.html by default after writing the summary.',
     '--strict-cache fails the cache step when cache files are stale, expired, or missing freshness metadata.',
@@ -335,6 +335,7 @@ function renderHtmlSummary(summary) {
       { label: `总览截图 ${width}px`, file: `overview_mobile_layout_check${suffix}.png` },
       { label: `单品截图 ${width}px`, file: `latest_report_mobile_layout_check${suffix}.png` },
       { label: `本地回归截图 ${width}px`, file: `local_regression_summary_mobile_layout_check${suffix}.png` },
+      { label: `回归总览截图 ${width}px`, file: `local_regression_overview_mobile_layout_check${suffix}.png` },
     ];
   });
   if (summary.desktop_check) {
@@ -343,6 +344,7 @@ function renderHtmlSummary(summary) {
       { label: `总览桌面截图 ${summary.desktop_width}px`, file: `overview_desktop_layout_check${suffix}.png` },
       { label: `单品桌面截图 ${summary.desktop_width}px`, file: `latest_report_desktop_layout_check${suffix}.png` },
       { label: `本地回归桌面截图 ${summary.desktop_width}px`, file: `local_regression_summary_desktop_layout_check${suffix}.png` },
+      { label: `回归总览桌面截图 ${summary.desktop_width}px`, file: `local_regression_overview_desktop_layout_check${suffix}.png` },
     );
   }
   const statusText = summary.ok ? '通过' : '失败';
@@ -613,6 +615,19 @@ function pushLocalRegressionSummaryDesktopLayoutStep(steps, options) {
   ]));
 }
 
+function pushRegressionOverviewDesktopLayoutStep(steps, options) {
+  if (!options.desktop || !options.overview) return;
+  steps.push(runNodeStep('local_regression_overview_desktop_layout', `Regression overview desktop layout (${options.desktopWidth}px)`, [
+    'tools/check_regression_overview_layout.mjs',
+    '--width',
+    String(options.desktopWidth),
+    '--height',
+    String(options.desktopHeight),
+    '--screenshot',
+    desktopScreenshotPath('local_regression_overview_desktop_layout_check', options),
+  ]));
+}
+
 async function main() {
   let options;
   try {
@@ -709,6 +724,19 @@ async function main() {
   writeSummary(summary);
   summary.regression_overview_refresh = refreshRegressionOverview(options);
   writeSummary(summary);
+  if (options.overview) {
+    pushMobileLayoutSteps(steps, options, {
+      singleId: 'local_regression_overview_mobile_layout',
+      singleTitle: 'Regression overview mobile layout',
+      scriptPath: 'tools/check_regression_overview_layout.mjs',
+      screenshotBaseName: 'local_regression_overview_mobile_layout_check',
+    });
+    pushRegressionOverviewDesktopLayoutStep(steps, options);
+    summary = buildSummary(options, steps);
+    writeSummary(summary);
+    summary.regression_overview_refresh = refreshRegressionOverview(options);
+    writeSummary(summary);
+  }
 
   if (options.json) console.log(JSON.stringify(summary, null, 2));
   else printHuman(summary);

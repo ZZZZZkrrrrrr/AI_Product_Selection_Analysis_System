@@ -117,7 +117,7 @@ node tools/check_latest_report_mobile_layout.mjs
 
 `C:\Users\96259\Desktop\AIcoding\codex02\AIkuajing\output\amazon_product_analysis\latest_report_mobile_layout_check.png`
 
-一键检查会串联数据源健康、adapter fixture、可选 cache、总览移动端、单品移动端和本地回归报告移动端检查。默认检查 390px 手机宽度；`--multi-viewport` 会同时检查 360px、390px、414px，并额外输出对应宽度截图；`--strict-cache` 会把 stale、expired 或缺少新鲜度字段的 cache 视为失败；`--desktop` 会额外检查 1366px 桌面总览、单品报告和本地回归报告布局。结果默认写入：
+一键检查会串联数据源健康、adapter fixture、可选 cache、商品总览、单品报告、本地回归报告和统一回归总览布局检查。默认检查 390px 手机宽度；`--multi-viewport` 会同时检查 360px、390px、414px，并额外输出对应宽度截图；`--strict-cache` 会把 stale、expired 或缺少新鲜度字段的 cache 视为失败；`--desktop` 会额外检查 1366px 桌面商品总览、单品报告、本地回归报告和统一回归总览布局。结果默认写入：
 
 一键检查会先校验本地回归配置；如果配置文件格式错误，或 `freshness_threshold_hours` 不是正数，会先写出失败报告和修复建议，然后停止后续布局/数据源检查，避免浪费时间排查下游结果。
 
@@ -192,11 +192,21 @@ node tools/check_n8n_status.mjs
 
 `C:\Users\96259\Desktop\AIcoding\codex02\AIkuajing\output\amazon_product_analysis\local_regression_summary_desktop_layout_check.png`
 
+一键检查还会打开统一回归总览 `local_regression_overview.html` 做移动端布局检查，确认 n8n 服务状态、数据源健康、未知覆盖指标和回归卡片可见：
+
+`C:\Users\96259\Desktop\AIcoding\codex02\AIkuajing\output\amazon_product_analysis\local_regression_overview_mobile_layout_check.png`
+
+开启 `--desktop` 时，也会生成统一回归总览桌面截图：
+
+`C:\Users\96259\Desktop\AIcoding\codex02\AIkuajing\output\amazon_product_analysis\local_regression_overview_desktop_layout_check.png`
+
 单独检查命令：
 
 ```powershell
 node tools/check_regression_summary_mobile_layout.mjs
 node tools/check_regression_summary_mobile_layout.mjs --width 1366 --height 1000 --screenshot output\amazon_product_analysis\local_regression_summary_desktop_layout_check.png
+node tools/check_regression_overview_layout.mjs
+node tools/check_regression_overview_layout.mjs --width 1366 --height 1000 --screenshot output\amazon_product_analysis\local_regression_overview_desktop_layout_check.png
 ```
 
 授权有两种方式：

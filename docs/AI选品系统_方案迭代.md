@@ -5802,3 +5802,52 @@ V1.0 不直接上完整企业级 SP-API/Ads API，因为权限、成本和审核
 1. 给统一回归总览增加专门的移动端/桌面端布局检查，覆盖 n8n 服务状态、数据源健康和回归卡片。
 2. 让本地回归 summary 检查在自定义 `--html` 路径时显式检查该路径，而不是默认最新报告。
 3. 在 GitHub 更新后定期确认远端和本地 `main` 是否一致，避免自动化迭代只停留在本地。
+
+## 实现迭代 81：统一回归总览增加专门布局检查
+
+### 本轮实现依据
+
+- 迭代 79 的剩余风险指出，统一回归总览还没有专门的截图布局检查脚本。
+- 统一回归总览现在承载 n8n 授权来源、数据源健康、回归新鲜度、未知覆盖和多类回归卡片，是 V1.0 运维入口，不能只依赖字段检查。
+- 本轮只增加本地只读布局回归，不调用外部 API，不触发 n8n workflow，不改变商品分析主链路。
+
+### 本轮改动
+
+- 新增 `tools/check_regression_overview_layout.mjs`
+  - 默认检查 `local_regression_overview.html` 的 390px 移动端布局。
+  - 支持 `--width 1366 --height 1000` 做桌面布局检查。
+  - 检查无横向溢出、总状态、摘要指标、未知覆盖指标、刷新时间、重跑命令、n8n 服务状态、授权来源、数据源健康、数据源卡片和回归卡片。
+- `tools/run_local_regression_checks.mjs`
+  - 一键回归新增统一回归总览移动端布局检查。
+  - `--desktop` 模式新增统一回归总览桌面布局检查。
+  - 本地回归 HTML 的截图入口新增统一回归总览移动端/桌面端截图。
+  - 为保证检查对象是新总览，脚本会先刷新一次统一回归总览，再检查布局，最后再刷新一次把检查结果写回总览。
+- `README_AI选品分析系统.md`
+  - 补充统一回归总览布局检查说明、截图路径和单独检查命令。
+
+### 本轮验证
+
+- `node --check tools/check_regression_overview_layout.mjs` 通过。
+- `node --check tools/run_local_regression_checks.mjs` 通过。
+- `node tools/check_regression_overview_layout.mjs` 通过：
+  - 390px 移动端无横向溢出。
+  - n8n 服务状态、授权来源、数据源健康、未知覆盖指标和回归卡片均可见。
+  - 新增截图：`output/amazon_product_analysis/local_regression_overview_mobile_layout_check.png`。
+- `node tools/run_local_regression_checks.mjs --desktop --strict-n8n-api` 通过：
+  - `13` 项检查，`12` 通过，`1` 跳过，`0` 失败。
+  - n8n 状态为“正常”，API 已授权，crawler `HTTP 200`。
+  - 新增桌面截图：`output/amazon_product_analysis/local_regression_overview_desktop_layout_check.png`。
+- `local_regression_latest.json` 已包含：
+  - `local_regression_overview_mobile_layout = true`
+  - `local_regression_overview_desktop_layout = true`
+
+### 本轮剩余风险
+
+- 统一回归总览截图捕获的是检查前一次刷新后的总览，最终报告会再刷新并记录该检查结果；结构一致，但截图本身不包含最后新增的“自身布局检查”结果行。
+- 布局检查关注可读性、关键区域可见和横向溢出，不判断具体业务分数是否正确。
+
+### 下一轮实现建议
+
+1. 让本地回归 summary 检查在自定义 `--html` 路径时显式检查该路径，而不是默认最新报告。
+2. 把统一回归总览布局检查结果纳入总览摘要中的“运维可用”短结论。
+3. 尝试用 n8n API 做一次低频、受控的 workflow 只读/触发能力验证，确认授权不仅能读，还能支持自动执行。
