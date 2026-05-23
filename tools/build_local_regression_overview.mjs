@@ -12,6 +12,8 @@ const outputDir = path.join(projectRoot, 'output', 'amazon_product_analysis');
 
 const defaultJsonPath = path.join(outputDir, 'local_regression_overview.json');
 const defaultHtmlPath = path.join(outputDir, 'local_regression_overview.html');
+const defaultReleaseReadinessJsonPath = path.join(outputDir, 'release_readiness_latest.json');
+const defaultReleaseReadinessHtmlPath = path.join(outputDir, 'release_readiness_latest.html');
 const defaultConfigPath = path.join(projectRoot, 'config', 'local_regression.local.json');
 const exampleConfigPath = path.join(projectRoot, 'config', 'local_regression.example.json');
 const defaultDataSourcesPath = path.join(outputDir, 'data_sources.local.json');
@@ -1172,6 +1174,12 @@ function rerunCommands() {
       command: 'node tools/run_local_regression_checks.mjs --strict-cache',
       when: '排查缓存新鲜度、adapter cache 或数据源兜底时使用。',
     },
+    {
+      id: 'release_readiness',
+      label: '可演示状态',
+      command: 'node tools/check_release_readiness.mjs',
+      when: '演示、交付或发给他人前，用来快速判断当前系统能否继续使用。',
+    },
   ];
 }
 
@@ -1255,6 +1263,8 @@ function buildOverview(options) {
     output_dir: outputDir,
     summary_path: defaultJsonPath,
     html_report_path: defaultHtmlPath,
+    release_readiness_json_path: defaultReleaseReadinessJsonPath,
+    release_readiness_html_path: defaultReleaseReadinessHtmlPath,
     counts: {
       configured: runs.length,
       status_counted: statusRuns.length,
@@ -1428,6 +1438,8 @@ function renderHtml(overview) {
   const commandWorkingDirectory = overview.command_working_directory || overview.project_root || projectRoot;
   const localRegressionConfigPath = overview.local_regression_config_path || config.configPath || defaultConfigPath;
   const dataSourceConfigPath = overview.data_source_config_path || defaultDataSourcesPath;
+  const releaseReadinessHtmlPath = overview.release_readiness_html_path || defaultReleaseReadinessHtmlPath;
+  const releaseReadinessJsonPath = overview.release_readiness_json_path || defaultReleaseReadinessJsonPath;
   const dataSourceConfigMissing = overview.data_source_config_exists === false;
   const dataSourceHealth = overview.data_source_health_summary || null;
   const dataSourceValidation = config.data_source_validation || null;
@@ -1509,6 +1521,14 @@ function renderHtml(overview) {
       <div class="command-cwd command-data-source-path ${dataSourceConfigMissing ? 'warn' : ''}">
         <span>数据源配置</span>
         <code>${htmlEscape(dataSourceConfigPath)}${dataSourceConfigMissing ? '（未找到）' : ''}</code>
+      </div>
+      <div class="command-cwd command-release-path">
+        <span>短报告 HTML</span>
+        <code>${htmlEscape(releaseReadinessHtmlPath)}</code>
+      </div>
+      <div class="command-cwd command-release-json-path">
+        <span>短报告 JSON</span>
+        <code>${htmlEscape(releaseReadinessJsonPath)}</code>
       </div>
       <div class="command-grid">
         ${commands

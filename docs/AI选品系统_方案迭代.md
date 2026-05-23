@@ -6066,3 +6066,45 @@ V1.0 不直接上完整企业级 SP-API/Ads API，因为权限、成本和审核
 1. 尝试用 n8n API 做一次低频、受控的 workflow 只读/触发能力验证，确认授权不仅能读，还能支持自动执行。
 2. 把 `cross_border_dashboard/` 的归属判断清楚：如果是本项目新 UI，则纳入版本；如果是实验产物，则加入忽略规则。
 3. 把短报告入口加入统一回归总览“文件入口”或 README 顶部快速入口。
+
+## 实现迭代 87：统一回归总览接入可演示短报告入口
+
+### 本轮实现依据
+
+- 迭代 86 已经生成 `release_readiness_latest.html` 和 `release_readiness_latest.json`，但日常入口仍分散在 README 和命令行中。
+- 用户当前更需要非技术化、可直接打开的状态判断入口；统一回归总览已经是本地运维入口，适合承载“演示前先看这里”的短报告路径和重跑命令。
+- 本轮只增强本地总览和文档，不触发 n8n workflow，不调用外部业务 API，也不改变商品分析主链路。
+
+### 本轮改动
+
+- `tools/build_local_regression_overview.mjs`
+  - 新增 `release_readiness_json_path` 和 `release_readiness_html_path`。
+  - “重跑命令”区块新增短报告 HTML/JSON 路径。
+  - “重跑命令”区块新增 `可演示状态` 命令：`node tools/check_release_readiness.mjs`。
+- `README_AI选品分析系统.md`
+  - 补充说明统一回归总览会固定展示短报告入口和重跑命令。
+
+### 本轮验证
+
+- `node --check tools/build_local_regression_overview.mjs` 通过。
+- `node --check tools/check_regression_overview_layout.mjs` 通过。
+- `node tools/build_local_regression_overview.mjs` 通过。
+- `node tools/check_regression_overview_layout.mjs` 通过：
+  - 390px 移动端无横向溢出。
+  - “重跑命令”、n8n 状态、GitHub 同步、数据源健康、运维结论和回归卡片均可见。
+- 已确认 `local_regression_overview.html` 包含：
+  - `短报告 HTML`
+  - `release_readiness_latest.html`
+  - `release_readiness_latest.json`
+  - `可演示状态`
+
+### 本轮剩余风险
+
+- 短报告入口只是展示和重跑入口；真正的“可演示/需关注”仍由 `tools/check_release_readiness.mjs` 在当前本地状态下重新判断。
+- 提交前短报告可能因本地有未提交改动显示“需关注”，需要提交并推送后再做最终可演示确认。
+
+### 下一轮实现建议
+
+1. 提交并推送本轮短报告入口改动，然后重新运行一键回归和可演示短报告，确认 GitHub 同步后状态恢复为“可演示”。
+2. 尝试用 n8n API 做一次低频、受控的 workflow 只读/触发能力验证，确认授权不仅读取可用，也能支持自动执行。
+3. 把 `cross_border_dashboard/` 的归属判断清楚：如果是本项目新 UI，则纳入版本；如果是实验产物，则加入忽略规则。

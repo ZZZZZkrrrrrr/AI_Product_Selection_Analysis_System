@@ -107,6 +107,8 @@ node tools/check_release_readiness.mjs
 
 `C:\Users\96259\Desktop\AIcoding\codex02\AIkuajing\output\amazon_product_analysis\release_readiness_latest.html`
 
+统一回归总览的“重跑命令”区块也会固定展示该短报告的 HTML/JSON 路径和重跑命令，日常演示前可以先打开总览确认入口。
+
 总览页移动端布局检查：
 
 ```powershell
@@ -178,7 +180,7 @@ node tools/build_local_regression_overview.mjs --validate-config
 node tools/build_local_regression_overview.mjs --data-sources output/amazon_product_analysis/data_sources.local.json --validate-config
 ```
 
-统一回归总览 HTML 还会显示“重跑命令”区块，包含工作目录、当前回归配置文件、数据源配置文件、日常一键回归、只校验配置、只刷新总览、多视口回归、桌面回归和严格 cache 回归。打开报告后可以先确认执行目录和配置文件，再按场景选择下一步命令。
+统一回归总览 HTML 还会显示“重跑命令”区块，包含工作目录、当前回归配置文件、数据源配置文件、可演示短报告路径、日常一键回归、只校验配置、只刷新总览、多视口回归、桌面回归、严格 cache 回归和可演示状态检查。打开报告后可以先确认执行目录和配置文件，再按场景选择下一步命令。
 
 统一回归总览还会读取 `data_sources.local.json` 并展示数据源健康摘要，包括当前可用数据源、预留未接入数据源、需关注数量和最近检查时间。
 
