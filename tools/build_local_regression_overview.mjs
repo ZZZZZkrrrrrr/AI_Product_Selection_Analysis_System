@@ -14,6 +14,8 @@ const defaultJsonPath = path.join(outputDir, 'local_regression_overview.json');
 const defaultHtmlPath = path.join(outputDir, 'local_regression_overview.html');
 const defaultReleaseReadinessJsonPath = path.join(outputDir, 'release_readiness_latest.json');
 const defaultReleaseReadinessHtmlPath = path.join(outputDir, 'release_readiness_latest.html');
+const defaultWorkflowContractJsonPath = path.join(outputDir, 'n8n_workflow_contract_latest.json');
+const defaultWorkflowContractHtmlPath = path.join(outputDir, 'n8n_workflow_contract_latest.html');
 const defaultConfigPath = path.join(projectRoot, 'config', 'local_regression.local.json');
 const exampleConfigPath = path.join(projectRoot, 'config', 'local_regression.example.json');
 const defaultDataSourcesPath = path.join(outputDir, 'data_sources.local.json');
@@ -1180,6 +1182,12 @@ function rerunCommands() {
       command: 'node tools/check_release_readiness.mjs',
       when: '演示、交付或发给他人前，用来快速判断当前系统能否继续使用。',
     },
+    {
+      id: 'n8n_workflow_contract',
+      label: 'n8n 合同检查',
+      command: 'node tools/check_n8n_workflow_contract.mjs',
+      when: '更新 n8n 节点、Webhook 或自动触发入口前，确认 live 工作流结构仍符合 V1.0。',
+    },
   ];
 }
 
@@ -1265,6 +1273,8 @@ function buildOverview(options) {
     html_report_path: defaultHtmlPath,
     release_readiness_json_path: defaultReleaseReadinessJsonPath,
     release_readiness_html_path: defaultReleaseReadinessHtmlPath,
+    n8n_workflow_contract_json_path: defaultWorkflowContractJsonPath,
+    n8n_workflow_contract_html_path: defaultWorkflowContractHtmlPath,
     counts: {
       configured: runs.length,
       status_counted: statusRuns.length,
@@ -1440,6 +1450,8 @@ function renderHtml(overview) {
   const dataSourceConfigPath = overview.data_source_config_path || defaultDataSourcesPath;
   const releaseReadinessHtmlPath = overview.release_readiness_html_path || defaultReleaseReadinessHtmlPath;
   const releaseReadinessJsonPath = overview.release_readiness_json_path || defaultReleaseReadinessJsonPath;
+  const workflowContractHtmlPath = overview.n8n_workflow_contract_html_path || defaultWorkflowContractHtmlPath;
+  const workflowContractJsonPath = overview.n8n_workflow_contract_json_path || defaultWorkflowContractJsonPath;
   const dataSourceConfigMissing = overview.data_source_config_exists === false;
   const dataSourceHealth = overview.data_source_health_summary || null;
   const dataSourceValidation = config.data_source_validation || null;
@@ -1529,6 +1541,14 @@ function renderHtml(overview) {
       <div class="command-cwd command-release-json-path">
         <span>短报告 JSON</span>
         <code>${htmlEscape(releaseReadinessJsonPath)}</code>
+      </div>
+      <div class="command-cwd command-workflow-contract-path">
+        <span>n8n合同 HTML</span>
+        <code>${htmlEscape(workflowContractHtmlPath)}</code>
+      </div>
+      <div class="command-cwd command-workflow-contract-json-path">
+        <span>n8n合同 JSON</span>
+        <code>${htmlEscape(workflowContractJsonPath)}</code>
       </div>
       <div class="command-grid">
         ${commands

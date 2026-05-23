@@ -6108,3 +6108,50 @@ V1.0 不直接上完整企业级 SP-API/Ads API，因为权限、成本和审核
 1. 提交并推送本轮短报告入口改动，然后重新运行一键回归和可演示短报告，确认 GitHub 同步后状态恢复为“可演示”。
 2. 尝试用 n8n API 做一次低频、受控的 workflow 只读/触发能力验证，确认授权不仅读取可用，也能支持自动执行。
 3. 把 `cross_border_dashboard/` 的归属判断清楚：如果是本项目新 UI，则纳入版本；如果是实验产物，则加入忽略规则。
+
+## 实现迭代 88：新增 live n8n 工作流合同检查
+
+### 本轮实现依据
+
+- 之前的 n8n 状态检查已经能证明 API 授权可用，但只确认“能读取”，没有确认读到的 live workflow 结构仍符合 V1.0 主链路。
+- 后续如果要自动触发或继续同步 live workflow，必须先有一个只读合同检查，避免节点名、输入字段、Webhook、模型或报告输出字段漂移后还误判为可执行。
+- 本轮只读 n8n workflow API，不触发 workflow，不调用 Amazon、阿里百炼或爬虫分析链路。
+
+### 本轮改动
+
+- 新增 `tools/check_n8n_workflow_contract.mjs`
+  - 默认读取 live workflow：`nRSff4JkGEfBZJJd`。
+  - 支持已保存 Windows 凭据和 `N8N_API_KEY`。
+  - 检查关键节点、V1.0 输入字段、Crawlee 请求、阿里百炼 `qwen-turbo` 模型、HTML/CSV 与解释型 JSON 输出标记、Webhook 入口和核心连接。
+  - 输出：
+    - `output/amazon_product_analysis/n8n_workflow_contract_latest.json`
+    - `output/amazon_product_analysis/n8n_workflow_contract_latest.html`
+  - 支持 `--source local` 或 `--input <path>` 做本地 workflow 文件检查。
+- `tools/build_local_regression_overview.mjs`
+  - “重跑命令”区块新增 `n8n 合同检查`。
+  - 新增 n8n 合同检查 HTML/JSON 路径入口。
+- `README_AI选品分析系统.md`
+  - 补充只读 n8n 工作流合同检查命令、检查范围和输出路径。
+
+### 本轮验证
+
+- `node --check tools/check_n8n_workflow_contract.mjs` 通过。
+- `node tools/check_n8n_workflow_contract.mjs` 通过：
+  - live workflow 读取成功。
+  - 授权来源：已保存 Windows 凭据。
+  - 节点数：`25`。
+  - 连接数：`16`。
+  - Webhook：ready。
+  - 结论：`通过`。
+
+### 本轮剩余风险
+
+- 该检查确认 workflow 结构和触发入口，不代表下一次真实执行时 Amazon 页面、阿里百炼额度或网络一定成功。
+- 本地源文件 `n8n/workflows/amazon_product_analysis_crawlee_bailian_html.json` 当前没有 live Webhook 节点；用 `--source local` 检查会提示触发入口未就绪，这是预期差异。
+- 目前合同检查还没有纳入一键回归的强制步骤，本轮先作为独立只读入口沉淀。
+
+### 下一轮实现建议
+
+1. 将 n8n 工作流合同检查接入可演示短报告或一键回归，让“可演示”状态同时覆盖 live workflow 结构。
+2. 做一次受控的 API 触发演练前置方案：只允许固定测试商品、低频执行、执行前后记录报告时间和 latest execution。
+3. 把 `cross_border_dashboard/` 的归属判断清楚：如果是本项目新 UI，则纳入版本；如果是实验产物，则加入忽略规则。

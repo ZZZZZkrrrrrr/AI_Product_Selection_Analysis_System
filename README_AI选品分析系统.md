@@ -109,6 +109,16 @@ node tools/check_release_readiness.mjs
 
 统一回归总览的“重跑命令”区块也会固定展示该短报告的 HTML/JSON 路径和重跑命令，日常演示前可以先打开总览确认入口。
 
+只读检查 live n8n 工作流结构是否仍符合 V1.0：
+
+```powershell
+node tools/check_n8n_workflow_contract.mjs
+```
+
+该命令会读取目标 workflow，检查关键节点、输入字段、Crawlee 请求、阿里百炼 qwen-turbo、报告输出字段、Webhook 入口和主链路连接；不会触发 workflow 执行。输出文件：
+
+`C:\Users\96259\Desktop\AIcoding\codex02\AIkuajing\output\amazon_product_analysis\n8n_workflow_contract_latest.html`
+
 总览页移动端布局检查：
 
 ```powershell
@@ -180,7 +190,7 @@ node tools/build_local_regression_overview.mjs --validate-config
 node tools/build_local_regression_overview.mjs --data-sources output/amazon_product_analysis/data_sources.local.json --validate-config
 ```
 
-统一回归总览 HTML 还会显示“重跑命令”区块，包含工作目录、当前回归配置文件、数据源配置文件、可演示短报告路径、日常一键回归、只校验配置、只刷新总览、多视口回归、桌面回归、严格 cache 回归和可演示状态检查。打开报告后可以先确认执行目录和配置文件，再按场景选择下一步命令。
+统一回归总览 HTML 还会显示“重跑命令”区块，包含工作目录、当前回归配置文件、数据源配置文件、可演示短报告路径、n8n 工作流合同报告路径、日常一键回归、只校验配置、只刷新总览、多视口回归、桌面回归、严格 cache 回归、可演示状态检查和 n8n 合同检查。打开报告后可以先确认执行目录和配置文件，再按场景选择下一步命令。
 
 统一回归总览还会读取 `data_sources.local.json` 并展示数据源健康摘要，包括当前可用数据源、预留未接入数据源、需关注数量和最近检查时间。
 
