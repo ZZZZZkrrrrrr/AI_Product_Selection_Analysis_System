@@ -97,6 +97,16 @@ node tools/run_local_regression_checks.mjs --desktop
 node tools/build_local_regression_overview.mjs
 ```
 
+生成“当前是否可演示/可使用”的短报告：
+
+```powershell
+node tools/check_release_readiness.mjs
+```
+
+该命令只读取本地状态，不调用外部 API，也不触发 n8n 执行。输出文件：
+
+`C:\Users\96259\Desktop\AIcoding\codex02\AIkuajing\output\amazon_product_analysis\release_readiness_latest.html`
+
 总览页移动端布局检查：
 
 ```powershell

@@ -6022,3 +6022,47 @@ V1.0 不直接上完整企业级 SP-API/Ads API，因为权限、成本和审核
 1. 尝试用 n8n API 做一次低频、受控的 workflow 只读/触发能力验证，确认授权不仅能读，还能支持自动执行。
 2. 增加一个只读命令，专门输出“当前是否可发布/可演示”的短报告。
 3. 把 `cross_border_dashboard/` 的归属判断清楚：如果是本项目新 UI，则纳入版本；如果是实验产物，则加入忽略规则。
+
+## 实现迭代 86：新增可演示状态短报告
+
+### 本轮实现依据
+
+- V1.0 已经有单品报告、回归总览、运维结论和 GitHub 同步状态，但用户仍需要一个更短的入口判断“现在能不能演示/使用”。
+- 迭代 85 后本地回归报告可读性提升，下一步适合抽象出只读短报告，避免每次都打开完整 HTML 总览排查。
+- 本轮只读取本地状态文件，不调用外部 API，不触发 n8n workflow，不改变商品分析主链路。
+
+### 本轮改动
+
+- 新增 `tools/check_release_readiness.mjs`
+  - 汇总最新单品报告、本地回归、统一运维结论、n8n 授权、数据源健康和 GitHub 同步状态。
+  - 输出命令行短结论：`可演示 / 需关注`。
+  - 默认写出：
+    - `output/amazon_product_analysis/release_readiness_latest.json`
+    - `output/amazon_product_analysis/release_readiness_latest.html`
+  - 支持 `--json` 和 `--no-write`。
+  - 未跟踪目录只作为 GitHub 同步事实展示，不直接阻断“可演示”判断。
+- `README_AI选品分析系统.md`
+  - 新增可演示状态短报告命令和输出路径说明。
+
+### 本轮验证
+
+- `node --check tools/check_release_readiness.mjs` 通过。
+- 提交前运行 `node tools/check_release_readiness.mjs` 通过：
+  - 正确输出 `需关注`，原因是本轮代码尚未提交，GitHub 同步为“有本地改动”。
+- `node tools/run_local_regression_checks.mjs --desktop --strict-n8n-api` 通过：
+  - `13` 项检查，`12` 通过，`1` 跳过，`0` 失败。
+  - n8n 状态为“正常”，API 已授权，crawler `HTTP 200`。
+- 短报告已生成：
+  - `output/amazon_product_analysis/release_readiness_latest.json`
+  - `output/amazon_product_analysis/release_readiness_latest.html`
+
+### 本轮剩余风险
+
+- 该短报告判断的是本地系统状态，不代表 Amazon 页面、阿里百炼或网络在下一次真实执行时一定成功。
+- 如果本地回归总览过旧，短报告会继承旧总览的判断；需要先运行一键回归刷新。
+
+### 下一轮实现建议
+
+1. 尝试用 n8n API 做一次低频、受控的 workflow 只读/触发能力验证，确认授权不仅能读，还能支持自动执行。
+2. 把 `cross_border_dashboard/` 的归属判断清楚：如果是本项目新 UI，则纳入版本；如果是实验产物，则加入忽略规则。
+3. 把短报告入口加入统一回归总览“文件入口”或 README 顶部快速入口。
