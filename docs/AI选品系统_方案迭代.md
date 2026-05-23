@@ -5851,3 +5851,42 @@ V1.0 不直接上完整企业级 SP-API/Ads API，因为权限、成本和审核
 1. 让本地回归 summary 检查在自定义 `--html` 路径时显式检查该路径，而不是默认最新报告。
 2. 把统一回归总览布局检查结果纳入总览摘要中的“运维可用”短结论。
 3. 尝试用 n8n API 做一次低频、受控的 workflow 只读/触发能力验证，确认授权不仅能读，还能支持自动执行。
+
+## 实现迭代 82：自定义本地回归 HTML 路径纳入布局检查
+
+### 本轮实现依据
+
+- 迭代 81 后，一键回归会检查本地回归 summary 布局，但当用户传入 `--html <路径>` 时，布局检查仍可能落回默认 `local_regression_latest.html`。
+- V1.0 运维入口需要保证“生成哪份报告，就检查哪份报告”，否则自定义输出用于临时验证时可能漏检。
+- 本轮只调整本地回归检查参数传递，不调用外部 API，不触发 n8n workflow，不改变商品分析主链路。
+
+### 本轮改动
+
+- `tools/run_local_regression_checks.mjs`
+  - `mobileLayoutStepArgs()` 支持额外参数。
+  - 本地回归 summary 移动端布局检查会传入 `--report options.htmlPath`。
+  - 默认路径行为不变；自定义 `--html` 时会显式检查用户指定的 HTML 文件。
+- `README_AI选品分析系统.md`
+  - 补充说明自定义 `--html <路径>` 时，布局检查会检查该自定义 HTML。
+
+### 本轮验证
+
+- `node --check tools/run_local_regression_checks.mjs` 通过。
+- `node tools/run_local_regression_checks.mjs --summary output/amazon_product_analysis/local_regression_custom_html_path_test.json --html output/amazon_product_analysis/local_regression_custom_html_path_test.html --no-overview` 通过：
+  - `local_regression_summary_mobile_layout` 步骤通过。
+  - 步骤命令已包含 `--report C:\Users\96259\Desktop\AIcoding\codex02\AIkuajing\output\amazon_product_analysis\local_regression_custom_html_path_test.html`。
+  - 自定义 HTML 已生成：`output/amazon_product_analysis/local_regression_custom_html_path_test.html`。
+- `node tools/run_local_regression_checks.mjs --desktop --strict-n8n-api` 通过：
+  - `13` 项检查，`12` 通过，`1` 跳过，`0` 失败。
+  - n8n 状态为“正常”，API 已授权，crawler `HTTP 200`。
+
+### 本轮剩余风险
+
+- 自定义 HTML 路径检查只覆盖本地回归 summary 报告，不改变统一回归总览的默认输出路径。
+- 如果用户把 `--html` 指向不可写目录，仍会在写报告阶段失败，布局检查不会继续执行。
+
+### 下一轮实现建议
+
+1. 把统一回归总览布局检查结果纳入总览摘要中的“运维可用”短结论。
+2. 尝试用 n8n API 做一次低频、受控的 workflow 只读/触发能力验证，确认授权不仅能读，还能支持自动执行。
+3. 增加 GitHub 同步状态到本地回归总览，显示本地提交是否已经推送。

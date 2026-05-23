@@ -184,6 +184,8 @@ node tools/check_n8n_status.mjs
 
 一键本地回归报告 `local_regression_latest.html` 的顶部也会显示同一份 n8n 状态摘要，方便先看本轮回归结果时直接判断 API 是否授权。
 
+如果使用 `--html <路径>` 输出一份自定义本地回归报告，一键检查会显式打开这份自定义 HTML 做布局检查，而不是默认检查 `local_regression_latest.html`。
+
 一键本地回归还会单独打开 `local_regression_latest.html` 做移动端布局检查，并生成截图：
 
 `C:\Users\96259\Desktop\AIcoding\codex02\AIkuajing\output\amazon_product_analysis\local_regression_summary_mobile_layout_check.png`

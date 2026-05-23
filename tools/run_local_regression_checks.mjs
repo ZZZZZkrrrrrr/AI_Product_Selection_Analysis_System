@@ -550,10 +550,11 @@ function refreshRegressionOverview(options) {
   };
 }
 
-function mobileLayoutStepArgs(scriptPath, width, screenshotBaseName, options) {
-  if (options.viewportWidths.length === 1 && width === 390) return [scriptPath];
+function mobileLayoutStepArgs(scriptPath, width, screenshotBaseName, options, extraArgs = []) {
+  if (options.viewportWidths.length === 1 && width === 390) return [scriptPath, ...extraArgs];
   return [
     scriptPath,
+    ...extraArgs,
     '--width',
     String(width),
     '--height',
@@ -570,7 +571,7 @@ function pushMobileLayoutSteps(steps, options, config) {
     steps.push(runNodeStep(
       stepId,
       title,
-      mobileLayoutStepArgs(config.scriptPath, width, config.screenshotBaseName, options),
+      mobileLayoutStepArgs(config.scriptPath, width, config.screenshotBaseName, options, config.extraArgs || []),
     ));
   }
 }
@@ -718,6 +719,7 @@ async function main() {
     singleTitle: 'Local regression summary mobile layout',
     scriptPath: 'tools/check_regression_summary_mobile_layout.mjs',
     screenshotBaseName: 'local_regression_summary_mobile_layout_check',
+    extraArgs: ['--report', options.htmlPath],
   });
   pushLocalRegressionSummaryDesktopLayoutStep(steps, options);
   summary = buildSummary(options, steps);
