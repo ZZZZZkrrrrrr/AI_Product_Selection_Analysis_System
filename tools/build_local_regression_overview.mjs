@@ -2,6 +2,7 @@
 
 import fs from 'fs';
 import path from 'path';
+import { spawnSync } from 'child_process';
 import { fileURLToPath } from 'url';
 
 const __filename = fileURLToPath(import.meta.url);
@@ -1089,7 +1090,7 @@ function overviewFreshness(runs, generatedAt, thresholdHours) {
   };
 }
 
-function operationalReadinessSummary({ failingRuns, freshness, n8nStatus, dataSourceHealth, defaultRun }) {
+function operationalReadinessSummary({ failingRuns, freshness, n8nStatus, dataSourceHealth, gitStatus, defaultRun }) {
   const issues = [];
   const confirmations = [];
   const overviewLayout = defaultRun?.overview_layout_checks || {};
@@ -1108,6 +1109,9 @@ function operationalReadinessSummary({ failingRuns, freshness, n8nStatus, dataSo
 
   if (dataSourceHealth?.ok === false) issues.push(`数据源健康为 ${dataSourceHealth.status || '需关注'}`);
   else confirmations.push('数据源配置健康');
+
+  if (gitStatus?.ok === false) issues.push(`GitHub 同步状态为 ${gitStatus.status || '需关注'}`);
+  else if (gitStatus?.status === '已同步') confirmations.push('GitHub 远端已同步');
 
   if (overviewLayout.mobile?.ok) confirmations.push('统一回归总览移动端布局通过');
   else issues.push('统一回归总览移动端布局未通过或未检查');
@@ -1224,6 +1228,7 @@ function buildOverview(options) {
     : 0;
   const dataSourceHealthSummary = summarizeDataSources(dataSourcesPath);
   const n8nStatusSummary = summarizeN8nStatus(defaultN8nStatusPath);
+  const gitStatusSummary = summarizeGitStatus();
   const freshness = overviewFreshness(runs, generatedAt, freshnessThresholdHours);
   const defaultRun = runs.find((run) => run.id === 'default') || null;
   const operationalReadiness = operationalReadinessSummary({
@@ -1231,6 +1236,7 @@ function buildOverview(options) {
     freshness,
     n8nStatus: n8nStatusSummary,
     dataSourceHealth: dataSourceHealthSummary,
+    gitStatus: gitStatusSummary,
     defaultRun,
   });
   return {
@@ -1244,6 +1250,7 @@ function buildOverview(options) {
     data_source_health_summary: dataSourceHealthSummary,
     n8n_status_path: defaultN8nStatusPath,
     n8n_status_summary: n8nStatusSummary,
+    git_status_summary: gitStatusSummary,
     operational_readiness: operationalReadiness,
     output_dir: outputDir,
     summary_path: defaultJsonPath,
@@ -1303,6 +1310,116 @@ function n8nCredentialStateLabel(status) {
   return '未配置';
 }
 
+function runGit(args) {
+  const result = spawnSync('git', args, {
+    cwd: projectRoot,
+    encoding: 'utf8',
+    windowsHide: true,
+  });
+  return {
+    ok: result.status === 0,
+    status: result.status,
+    stdout: (result.stdout || '').trim(),
+    stderr: (result.stderr || '').trim(),
+  };
+}
+
+function sanitizeRemoteUrl(value) {
+  return String(value || '').replace(/^(https?:\/\/)([^/@\s]+)@/i, '$1***@');
+}
+
+function summarizeGitStatus() {
+  const inside = runGit(['rev-parse', '--is-inside-work-tree']);
+  if (!inside.ok || inside.stdout !== 'true') {
+    return {
+      ok: true,
+      status: '未启用',
+      status_class: 'muted',
+      message: '当前目录不是 Git 工作区，无法展示 GitHub 同步状态。',
+      branch: '暂无',
+      upstream: '暂无',
+      remote_url: '',
+      local_commit: '',
+      remote_commit: '',
+      ahead: 0,
+      behind: 0,
+      dirty_tracked_count: 0,
+      untracked_count: 0,
+      untracked_preview: [],
+    };
+  }
+
+  const branch = runGit(['rev-parse', '--abbrev-ref', 'HEAD']).stdout || 'HEAD';
+  const upstream = runGit(['rev-parse', '--abbrev-ref', '--symbolic-full-name', '@{u}']);
+  const remoteUrl = runGit(['remote', 'get-url', 'origin']);
+  const localCommit = runGit(['rev-parse', '--short', 'HEAD']).stdout || '';
+  const porcelain = runGit(['status', '--porcelain']);
+  const statusLines = porcelain.ok && porcelain.stdout ? porcelain.stdout.split(/\r?\n/).filter(Boolean) : [];
+  const untracked = statusLines.filter((line) => line.startsWith('??')).map((line) => line.slice(3).trim());
+  const dirtyTracked = statusLines.filter((line) => !line.startsWith('??'));
+
+  if (!upstream.ok) {
+    return {
+      ok: false,
+      status: '未绑定远端',
+      status_class: 'warn',
+      message: '当前分支没有 upstream，无法判断是否已推送到 GitHub。',
+      branch,
+      upstream: '暂无',
+      remote_url: sanitizeRemoteUrl(remoteUrl.stdout),
+      local_commit: localCommit,
+      remote_commit: '',
+      ahead: 0,
+      behind: 0,
+      dirty_tracked_count: dirtyTracked.length,
+      untracked_count: untracked.length,
+      untracked_preview: untracked.slice(0, 5),
+    };
+  }
+
+  const remoteCommit = runGit(['rev-parse', '--short', '@{u}']).stdout || '';
+  const aheadBehind = runGit(['rev-list', '--left-right', '--count', 'HEAD...@{u}']);
+  const [aheadText, behindText] = aheadBehind.stdout.split(/\s+/);
+  const ahead = Number.parseInt(aheadText, 10) || 0;
+  const behind = Number.parseInt(behindText, 10) || 0;
+  const hasTrackedChanges = dirtyTracked.length > 0;
+  const ok = ahead === 0 && behind === 0 && !hasTrackedChanges;
+  let status = '已同步';
+  let message = '本地 HEAD 已和远端 upstream 同步。';
+  if (ahead > 0 && behind > 0) {
+    status = '分支分叉';
+    message = `本地领先 ${ahead} 个提交，同时落后远端 ${behind} 个提交，需要先同步分支。`;
+  } else if (ahead > 0) {
+    status = '待推送';
+    message = `本地还有 ${ahead} 个提交未推送到 GitHub。`;
+  } else if (behind > 0) {
+    status = '需拉取';
+    message = `远端有 ${behind} 个提交本地尚未同步。`;
+  } else if (hasTrackedChanges) {
+    status = '有本地改动';
+    message = `有 ${dirtyTracked.length} 个已跟踪文件存在未提交改动。`;
+  } else if (untracked.length > 0) {
+    message = `本地与远端提交一致；另有 ${untracked.length} 个未跟踪项未纳入同步判断。`;
+  }
+
+  return {
+    ok,
+    status,
+    status_class: ok ? 'ok' : 'warn',
+    message,
+    branch,
+    upstream: upstream.stdout,
+    remote_url: sanitizeRemoteUrl(remoteUrl.stdout),
+    local_commit: localCommit,
+    remote_commit: remoteCommit,
+    ahead,
+    behind,
+    dirty_tracked_count: dirtyTracked.length,
+    untracked_count: untracked.length,
+    untracked_preview: untracked.slice(0, 5),
+  };
+}
+
 function renderHtml(overview) {
   const freshness = overview.freshness || {};
   const config = overview.freshness_config || {};
@@ -1315,6 +1432,7 @@ function renderHtml(overview) {
   const dataSourceHealth = overview.data_source_health_summary || null;
   const dataSourceValidation = config.data_source_validation || null;
   const n8nStatus = overview.n8n_status_summary || null;
+  const gitStatus = overview.git_status_summary || null;
   const operationalReadiness = overview.operational_readiness || null;
   const n8nStatusPath = overview.n8n_status_path || defaultN8nStatusPath;
   const dataSourceMessages = [
@@ -1450,6 +1568,41 @@ function renderHtml(overview) {
                 )
                 .join('')}
             </div>`
+          : ''
+      }
+    </section>`
+    : '';
+  const gitPanel = gitStatus
+    ? `
+    <section class="git-health ${htmlEscape(gitStatus.status_class || 'muted')}" aria-label="GitHub 同步状态">
+      <div class="git-head">
+        <div>
+          <strong>GitHub 同步</strong>
+          <p>${htmlEscape(gitStatus.message || '暂无 GitHub 同步状态。')}</p>
+        </div>
+        <b>${htmlEscape(gitStatus.status || '暂无')}</b>
+      </div>
+      <div class="git-facts">
+        <span>分支 ${htmlEscape(gitStatus.branch || '暂无')}</span>
+        <span>远端 ${htmlEscape(gitStatus.upstream || '暂无')}</span>
+        <span>本地 ${htmlEscape(gitStatus.local_commit || '暂无')}</span>
+        <span>远端提交 ${htmlEscape(gitStatus.remote_commit || '暂无')}</span>
+        <span>待推送 ${htmlEscape(gitStatus.ahead ?? 0)}</span>
+        <span>待拉取 ${htmlEscape(gitStatus.behind ?? 0)}</span>
+        <span>未提交 ${htmlEscape(gitStatus.dirty_tracked_count ?? 0)}</span>
+        <span>未跟踪 ${htmlEscape(gitStatus.untracked_count ?? 0)}</span>
+      </div>
+      ${
+        gitStatus.remote_url
+          ? `<div class="command-cwd git-remote-path">
+              <span>仓库</span>
+              <code>${htmlEscape(gitStatus.remote_url)}</code>
+            </div>`
+          : ''
+      }
+      ${
+        Array.isArray(gitStatus.untracked_preview) && gitStatus.untracked_preview.length
+          ? `<p class="git-note">未跟踪示例：${htmlEscape(gitStatus.untracked_preview.join(' / '))}</p>`
           : ''
       }
     </section>`
@@ -1629,6 +1782,17 @@ function renderHtml(overview) {
     .service-action { border: 1px solid #fcd34d; border-radius: 8px; background: #fffdf2; padding: 10px; min-width: 0; }
     .service-action strong { display: block; margin-bottom: 6px; }
     .service-action p { overflow-wrap: anywhere; }
+    .git-health { border: 1px solid var(--line); border-radius: 8px; background: #fff; padding: 14px; margin: 14px 0; }
+    .git-health.ok { border-color: #bbf7d0; }
+    .git-health.warn { border-color: #fcd34d; background: #fffbeb; }
+    .git-head { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; align-items: start; }
+    .git-head strong { display: block; font-size: 16px; }
+    .git-head b { border-radius: 999px; padding: 5px 10px; background: #f1f5f9; }
+    .git-health.ok .git-head b { background: #dcfce7; color: var(--ok); }
+    .git-health.warn .git-head b { background: #fef3c7; color: var(--skip); }
+    .git-facts { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+    .git-facts span { border: 1px solid #dce3ee; border-radius: 999px; background: #f8fafc; color: #475569; padding: 6px 10px; font-size: 12px; font-weight: 800; }
+    .git-note { margin-top: 8px; overflow-wrap: anywhere; }
     .ops-readiness { border: 1px solid var(--line); border-radius: 8px; background: #fff; padding: 14px; margin: 14px 0; }
     .ops-readiness.ok { border-color: #bbf7d0; }
     .ops-readiness.warn { border-color: #fcd34d; background: #fffbeb; }
@@ -1685,6 +1849,8 @@ function renderHtml(overview) {
       .command-head, .command-cwd, .command-grid { grid-template-columns: 1fr; }
       .service-head, .service-actions { grid-template-columns: 1fr; }
       .service-facts { display: grid; grid-template-columns: minmax(0, 1fr); }
+      .git-head { grid-template-columns: 1fr; }
+      .git-facts { display: grid; grid-template-columns: minmax(0, 1fr); }
       .ops-head { grid-template-columns: 1fr; }
       .ops-facts { display: grid; grid-template-columns: minmax(0, 1fr); }
       .source-head { grid-template-columns: 1fr; }
@@ -1737,6 +1903,7 @@ function renderHtml(overview) {
     ${configNotice}
     ${commandPanel}
     ${n8nPanel}
+    ${gitPanel}
     ${dataSourcePanel}
     <section aria-label="回归结果">
       ${cards}

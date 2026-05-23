@@ -221,6 +221,8 @@ function metricsExpression() {
     const visibleCommandPanel = isVisible(document.querySelector('.command-panel'));
     const visibleServiceHealth = isVisible(document.querySelector('.service-health'));
     const visibleServiceFacts = Array.from(document.querySelectorAll('.service-facts span')).filter(isVisible).length;
+    const visibleGitHealth = isVisible(document.querySelector('.git-health'));
+    const visibleGitFacts = Array.from(document.querySelectorAll('.git-facts span')).filter(isVisible).length;
     const visibleSourceHealth = isVisible(document.querySelector('.source-health'));
     const visibleSourceFacts = Array.from(document.querySelectorAll('.source-facts span')).filter(isVisible).length;
     const visibleSourceChips = Array.from(document.querySelectorAll('.source-chip')).filter(isVisible).length;
@@ -259,6 +261,8 @@ function metricsExpression() {
       visibleCommandPanel,
       visibleServiceHealth,
       visibleServiceFacts,
+      visibleGitHealth,
+      visibleGitFacts,
       visibleSourceHealth,
       visibleSourceFacts,
       visibleSourceChips,
@@ -267,6 +271,7 @@ function metricsExpression() {
       visibleLinks,
       hasUnknownOverrideMetric: textIncludes('未知覆盖'),
       hasOperationalReadinessText: textIncludes('运维结论') && (textIncludes('可继续使用') || textIncludes('需关注')),
+      hasGitHubSyncText: textIncludes('GitHub 同步') && (textIncludes('已同步') || textIncludes('待推送') || textIncludes('需拉取') || textIncludes('有本地改动')),
       hasAuthorizationSource: textIncludes('授权来源') && (textIncludes('已保存 Windows 凭据') || textIncludes('环境变量 N8N_API_KEY') || textIncludes('未配置')),
       hasDataSourceText: textIncludes('数据源健康'),
       hasRegressionCardText: textIncludes('默认回归') || textIncludes('桌面回归') || textIncludes('多视口回归'),
@@ -292,6 +297,9 @@ function buildChecks(metrics) {
     { name: 'n8n service status visible', ok: metrics.visibleServiceHealth === true },
     { name: 'n8n service facts visible', ok: metrics.visibleServiceFacts >= 6 },
     { name: 'n8n authorization source visible', ok: metrics.hasAuthorizationSource === true },
+    { name: 'github sync panel visible', ok: metrics.visibleGitHealth === true },
+    { name: 'github sync facts visible', ok: metrics.visibleGitFacts >= 6 },
+    { name: 'github sync text visible', ok: metrics.hasGitHubSyncText === true },
     { name: 'data source health visible', ok: metrics.visibleSourceHealth === true },
     { name: 'data source facts visible', ok: metrics.visibleSourceFacts >= 5 },
     { name: 'data source chips visible', ok: metrics.visibleSourceChips >= 6 },
@@ -407,12 +415,14 @@ function printHuman(result) {
   lines.push(`- header visible: ${result.metrics.visibleHeader ? 'yes' : 'no'}`);
   lines.push(`- summary metrics: ${result.metrics.visibleMetrics}`);
   lines.push(`- n8n service facts: ${result.metrics.visibleServiceFacts}`);
+  lines.push(`- github sync facts: ${result.metrics.visibleGitFacts}`);
   lines.push(`- data source chips: ${result.metrics.visibleSourceChips}`);
   lines.push(`- regression cards: ${result.metrics.visibleRunCards}`);
   lines.push(`- regression facts: ${result.metrics.visibleRunFacts}`);
   lines.push(`- unknown override metric: ${result.metrics.hasUnknownOverrideMetric ? 'yes' : 'no'}`);
   lines.push(`- operational readiness: ${result.metrics.hasOperationalReadinessText ? 'yes' : 'no'}`);
   lines.push(`- authorization source: ${result.metrics.hasAuthorizationSource ? 'yes' : 'no'}`);
+  lines.push(`- github sync: ${result.metrics.hasGitHubSyncText ? 'yes' : 'no'}`);
   lines.push(`- overflowing nodes: ${result.metrics.overflowingNodes.length}`);
   lines.push('');
   lines.push('Checks:');
