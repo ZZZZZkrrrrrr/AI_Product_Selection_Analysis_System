@@ -1,0 +1,54 @@
+{
+  "ok": true,
+  "source": "keepa",
+  "status": "connected",
+  "status_label": "已接入",
+  "fetched_at": "2026-05-23T06:50:00+08:00",
+  "cache": {
+    "hit": true,
+    "stale": false,
+    "cache_key": "amazon.in:B0BQXZ11B8:keepa:sample",
+    "path": "output/amazon_product_analysis/cache/keepa/amazon.in/B0BQXZ11B8.sample.json",
+    "ttl_hours": 24
+  },
+  "cost": {
+    "billable": false,
+    "unit": "request_or_token",
+    "estimated_units": 0,
+    "note": "sanitized fixture; not live API data"
+  },
+  "data": {
+    "price_history": [
+      { "date": "2026-05-20", "value": 6590 },
+      { "date": "2026-05-21", "value": 6590 },
+      { "date": "2026-05-22", "value": 6490 }
+    ],
+    "bsr_history": [],
+    "buy_box_history": [],
+    "seller_count_history": [],
+    "review_history": [],
+    "summary": {
+      "price_trend": "stable",
+      "bsr_trend": "unknown",
+      "volatility_score": 0.08,
+      "last_observed_price": 6490
+    }
+  },
+  "evidence": [
+    {
+      "label": "price_trend",
+      "value": "stable",
+      "source": "keepa_fixture",
+      "confidence": "medium"
+    }
+  ],
+  "risk_flags": [
+    {
+      "severity": "low",
+      "label": "fixture_data",
+      "text": "This is sanitized sample data for contract validation only."
+    }
+  ],
+  "error": null,
+  "next_retry_at": null
+}

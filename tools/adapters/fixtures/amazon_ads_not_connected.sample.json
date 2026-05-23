@@ -1,0 +1,51 @@
+{
+  "ok": false,
+  "source": "amazon_ads_api",
+  "status": "not_connected",
+  "status_label": "未接入",
+  "fetched_at": "2026-05-23T06:50:00+08:00",
+  "cache": {
+    "hit": false,
+    "stale": false,
+    "cache_key": "amazon.in:B0BQXZ11B8:amazon_ads_api:sample",
+    "path": "output/amazon_product_analysis/cache/amazon_ads_api/sample-profile/B0BQXZ11B8.sample.json",
+    "ttl_hours": 24
+  },
+  "cost": {
+    "billable": false,
+    "unit": "request",
+    "estimated_units": 0,
+    "note": "adapter not connected; no ad report request made"
+  },
+  "data": {
+    "profile": {},
+    "campaigns": [],
+    "keywords": [],
+    "reports": [],
+    "summary": {
+      "impressions": 0,
+      "clicks": 0,
+      "spend": 0,
+      "sales": 0,
+      "acos": null,
+      "tacos": null
+    }
+  },
+  "evidence": [
+    {
+      "label": "ads_api_status",
+      "value": "not_connected",
+      "source": "amazon_ads_fixture",
+      "confidence": "high"
+    }
+  ],
+  "risk_flags": [
+    {
+      "severity": "low",
+      "label": "ads_data_not_used",
+      "text": "Amazon Ads API is not connected, so keyword and campaign metrics are not used in scoring."
+    }
+  ],
+  "error": null,
+  "next_retry_at": null
+}

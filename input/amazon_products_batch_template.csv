@@ -1,0 +1,2 @@
+product_url,marketplace,target_keywords,competitor_asins,landed_cost,target_price,shipping_cost,platform_fee_rate,platform_fee,fulfillment_fee,ad_cost_estimate,ad_budget_hint,notes
+https://www.amazon.in/Sony-DualSense-Controller-Grey-PlayStation/dp/B0BQXZ11B8,amazon.in,"ps5 controller, dualsense controller, wireless gamepad","B08FC6C75Y,B09V4B6K53,B0BY8QNV1C",3800,6590,280,15%,,420,500,small budget test,example row for V1.0 batch input

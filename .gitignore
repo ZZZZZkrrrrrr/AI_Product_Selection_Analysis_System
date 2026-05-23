@@ -1,0 +1,57 @@
+# Local secrets and credentials
+.env
+.env.*
+*.credential.xml
+*.pem
+*.key
+*.p12
+*.pfx
+
+# Local runtime output
+output/
+__pycache__/
+*.pyc
+*.pyo
+*.log
+*.tmp
+*.bak
+.DS_Store
+Thumbs.db
+
+# Node / browser runtime artifacts
+node_modules/
+playwright-report/
+test-results/
+chrome_profile*/
+chrome_cdp*/
+
+# Local browser profiles and scraped personal/job data
+boss_crossborder_profile/
+boss_crossborder_logs/
+rendered_resume/
+rendered_resume_pdf/
+BOSS*.json
+BOSS*.xlsx
+high_pass_jobs*.json
+
+# Generated media and visual QA screenshots
+*.mp4
+*.wav
+*.xlsx
+需求3*.png
+需求3*.html
+跨境电商AI岗位_*.html
+cross_border_n8n_*.html
+crossborder-category-research-*.html
+build_crossborder_resume.py
+generate_crossborder_video.*
+generate_douyin_crossborder_video.py
+scrape_boss_details_*.mjs
+cross_border_dashboard_*.md
+us-pet-ball-ai-crossborder-prd.md
+全链路自动化内容流转智能体_PRD.md
+需求3-个人跨境电商0到1需求梳理.md
+
+# Local-only config
+config/*.local.json
+!config/*.example.json

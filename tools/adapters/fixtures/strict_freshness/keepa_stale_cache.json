@@ -1,0 +1,43 @@
+{
+  "ok": true,
+  "source": "keepa",
+  "status": "connected",
+  "status_label": "Connected",
+  "fetched_at": "2026-05-20T00:00:00+08:00",
+  "cache": {
+    "hit": true,
+    "stale": true,
+    "cache_key": "amazon.in:B0BQXZ11B8:keepa:stale-fixture",
+    "path": "tools/adapters/fixtures/strict_freshness/keepa_stale_cache.json",
+    "ttl_hours": 1
+  },
+  "cost": {
+    "billable": false,
+    "unit": "request_or_token",
+    "estimated_units": 0,
+    "note": "strict freshness negative fixture"
+  },
+  "data": {
+    "summary": {
+      "price_trend": "stale_fixture",
+      "last_observed_price": 6490
+    }
+  },
+  "evidence": [
+    {
+      "label": "strict_freshness_fixture",
+      "value": "stale cache should fail only when strict freshness is enabled",
+      "source": "keepa_fixture",
+      "confidence": "low"
+    }
+  ],
+  "risk_flags": [
+    {
+      "severity": "medium",
+      "label": "stale_cache",
+      "text": "This fixture intentionally marks cache.stale=true and uses an expired TTL."
+    }
+  ],
+  "error": null,
+  "next_retry_at": null
+}

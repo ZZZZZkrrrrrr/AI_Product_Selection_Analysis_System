@@ -1,0 +1,66 @@
+{
+  "version": 1,
+  "updated_at": "2026-05-23",
+  "last_checked_at": "2026-05-23T06:36:00+08:00",
+  "owner_notes": "示例配置：不要在本文件写入 API key、refresh token、client secret 或账号敏感信息。",
+  "scope": "amazon_product_analysis_v1",
+  "sources": {
+    "crawlee": {
+      "label": "页面抓取",
+      "status": "enabled",
+      "mode": "free_local",
+      "detail": "Crawlee + Playwright 本地低频抓取，免费兜底数据源。",
+      "last_checked_at": "2026-05-23T07:16:00+08:00",
+      "owner_notes": "本地免费爬虫兜底源；健康检查通过后可用于单品抓取和竞品快照。",
+      "priority": 1
+    },
+    "manual_inputs": {
+      "label": "手工增强字段",
+      "status": "optional",
+      "mode": "manual",
+      "detail": "成本、目标售价、关键词、竞品 ASIN 和运营备注。",
+      "last_checked_at": "2026-05-23T07:16:00+08:00",
+      "owner_notes": "由 Set the Input Fields 和批量 CSV 提供；缺失时报告降级但不失败。",
+      "priority": 2
+    },
+    "competitor_snapshot": {
+      "label": "竞品快照",
+      "status": "enabled",
+      "mode": "free_local",
+      "detail": "读取 competitor_snapshot_latest.json，作为低频竞品价格、评分、评论对照。",
+      "last_checked_at": "2026-05-23T07:16:00+08:00",
+      "owner_notes": "本地低频快照；carried_forward 代表沿用历史成功结果，不等于本轮重新抓取。",
+      "priority": 3
+    },
+    "keepa": {
+      "label": "Keepa 历史趋势",
+      "status": "not_connected",
+      "mode": "reserved_adapter",
+      "detail": "预留历史价格、BSR、Buy Box、卖家数和库存趋势。",
+      "last_checked_at": "2026-05-23T07:16:00+08:00",
+      "owner_notes": "未接入；接入前必须确认 API key、订阅额度、缓存 TTL 和费用控制。",
+      "required_env": ["KEEPA_API_KEY"],
+      "priority": 4
+    },
+    "sp_api": {
+      "label": "SP-API / Brand Analytics",
+      "status": "not_connected",
+      "mode": "reserved_adapter",
+      "detail": "预留 Catalog、Fees、Reports、Search Query Performance 和 Brand Analytics。",
+      "last_checked_at": "2026-05-23T07:16:00+08:00",
+      "owner_notes": "未接入；接入前必须确认授权、限流、PII 禁用、缓存和降级策略。",
+      "required_env": ["SP_API_CLIENT_ID", "SP_API_CLIENT_SECRET", "SP_API_REFRESH_TOKEN"],
+      "priority": 5
+    },
+    "amazon_ads_api": {
+      "label": "Amazon Ads API",
+      "status": "not_connected",
+      "mode": "reserved_adapter",
+      "detail": "预留关键词表现、广告报表、ACOS、TACOS 和投放验证数据。",
+      "last_checked_at": "2026-05-23T07:16:00+08:00",
+      "owner_notes": "未接入；V1 只允许只读报表，不创建广告、不改预算、不调价。",
+      "required_env": ["AMAZON_ADS_CLIENT_ID", "AMAZON_ADS_CLIENT_SECRET", "AMAZON_ADS_REFRESH_TOKEN"],
+      "priority": 6
+    }
+  }
+}

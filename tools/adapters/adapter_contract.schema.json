@@ -1,0 +1,142 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://local.ai-selection/adapter_contract.schema.json",
+  "title": "AI Selection Data Adapter Contract",
+  "type": "object",
+  "required": ["ok", "source", "status", "fetched_at", "cache", "cost", "data", "evidence", "risk_flags"],
+  "properties": {
+    "ok": {
+      "type": "boolean"
+    },
+    "source": {
+      "type": "string",
+      "enum": ["keepa", "sp_api", "amazon_ads_api", "crawlee", "competitor_snapshot"]
+    },
+    "status": {
+      "type": "string",
+      "enum": [
+        "connected",
+        "configured",
+        "not_connected",
+        "missing_config",
+        "rate_limited",
+        "quota_exhausted",
+        "permission_denied",
+        "auth_expired",
+        "failed"
+      ]
+    },
+    "status_label": {
+      "type": "string"
+    },
+    "fetched_at": {
+      "type": "string"
+    },
+    "cache": {
+      "type": "object",
+      "required": ["hit", "stale", "cache_key", "path", "ttl_hours"],
+      "properties": {
+        "hit": {
+          "type": "boolean"
+        },
+        "stale": {
+          "type": "boolean"
+        },
+        "cache_key": {
+          "type": "string"
+        },
+        "path": {
+          "type": "string"
+        },
+        "ttl_hours": {
+          "type": "number",
+          "minimum": 0
+        }
+      },
+      "additionalProperties": true
+    },
+    "cost": {
+      "type": "object",
+      "required": ["billable", "unit", "estimated_units", "note"],
+      "properties": {
+        "billable": {
+          "type": "boolean"
+        },
+        "unit": {
+          "type": "string"
+        },
+        "estimated_units": {
+          "type": "number",
+          "minimum": 0
+        },
+        "note": {
+          "type": "string"
+        }
+      },
+      "additionalProperties": true
+    },
+    "data": {
+      "type": "object"
+    },
+    "evidence": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["label", "value", "source"],
+        "properties": {
+          "label": {
+            "type": "string"
+          },
+          "value": {},
+          "source": {
+            "type": "string"
+          },
+          "confidence": {
+            "type": "string",
+            "enum": ["high", "medium", "low"]
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "risk_flags": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["severity", "label", "text"],
+        "properties": {
+          "severity": {
+            "type": "string",
+            "enum": ["high", "medium", "low"]
+          },
+          "label": {
+            "type": "string"
+          },
+          "text": {
+            "type": "string"
+          }
+        },
+        "additionalProperties": true
+      }
+    },
+    "error": {
+      "type": ["object", "null"],
+      "properties": {
+        "code": {
+          "type": "string"
+        },
+        "message": {
+          "type": "string"
+        },
+        "retryable": {
+          "type": "boolean"
+        }
+      },
+      "additionalProperties": true
+    },
+    "next_retry_at": {
+      "type": ["string", "null"]
+    }
+  },
+  "additionalProperties": true
+}

@@ -1,0 +1,722 @@
+{
+  "updatedAt": "2026-05-22T15:42:08.714Z",
+  "createdAt": "2026-05-22T15:35:53.654Z",
+  "id": "nRSff4JkGEfBZJJd",
+  "name": "Amazon 商品情报分析 - Crawlee免费抓取 + 阿里百炼 + HTML报告",
+  "description": "使用本地 Crawlee + Playwright 免费抓取 Amazon 页面，通过阿里百炼输出中文分析，并生成带数据透视、重点摘要和本地 CSV 备份的 HTML 可视化报告。",
+  "active": false,
+  "isArchived": false,
+  "nodes": [
+    {
+      "id": "9acc7180-abec-4d04-abd0-2505ec667a80",
+      "name": "When clicking ‘Execute workflow’",
+      "type": "n8n-nodes-base.manualTrigger",
+      "position": [
+        -1152,
+        656
+      ],
+      "parameters": {},
+      "typeVersion": 1
+    },
+    {
+      "id": "11b5855c-64a2-48be-9ee7-f4245554c13a",
+      "name": "Set the Input Fields",
+      "type": "n8n-nodes-base.set",
+      "position": [
+        -960,
+        656
+      ],
+      "parameters": {
+        "options": {},
+        "assignments": {
+          "assignments": [
+            {
+              "id": "8b6c695f-14f7-4ff9-b40a-90f27414c802",
+              "name": "product_url",
+              "type": "string",
+              "value": "={{ $json.product_url || $json.body?.product_url || 'https://www.amazon.in/Sony-DualSense-Controller-Grey-PlayStation/dp/B0BQXZ11B8' }}"
+            },
+            {
+              "id": "v1-marketplace",
+              "name": "marketplace",
+              "type": "string",
+              "value": "={{ $json.marketplace || $json.body?.marketplace || '' }}"
+            },
+            {
+              "id": "v1-target_keywords",
+              "name": "target_keywords",
+              "type": "string",
+              "value": "={{ $json.target_keywords || $json.body?.target_keywords || '' }}"
+            },
+            {
+              "id": "v1-competitor_asins",
+              "name": "competitor_asins",
+              "type": "string",
+              "value": "={{ $json.competitor_asins || $json.body?.competitor_asins || '' }}"
+            },
+            {
+              "id": "v1-landed_cost",
+              "name": "landed_cost",
+              "type": "string",
+              "value": "={{ $json.landed_cost || $json.body?.landed_cost || '' }}"
+            },
+            {
+              "id": "v1-target_price",
+              "name": "target_price",
+              "type": "string",
+              "value": "={{ $json.target_price || $json.body?.target_price || '' }}"
+            },
+            {
+              "id": "v1-shipping_cost",
+              "name": "shipping_cost",
+              "type": "string",
+              "value": "={{ $json.shipping_cost || $json.body?.shipping_cost || '' }}"
+            },
+            {
+              "id": "v1-ad_budget_hint",
+              "name": "ad_budget_hint",
+              "type": "string",
+              "value": "={{ $json.ad_budget_hint || $json.body?.ad_budget_hint || '' }}"
+            },
+            {
+              "id": "v1-notes",
+              "name": "notes",
+              "type": "string",
+              "value": "={{ $json.notes || $json.body?.notes || '' }}"
+            },
+            {
+              "id": "v1-platform_fee_rate",
+              "name": "platform_fee_rate",
+              "type": "string",
+              "value": "={{ $json.platform_fee_rate || $json.body?.platform_fee_rate || '' }}"
+            },
+            {
+              "id": "v1-platform_fee",
+              "name": "platform_fee",
+              "type": "string",
+              "value": "={{ $json.platform_fee || $json.body?.platform_fee || '' }}"
+            },
+            {
+              "id": "v1-fulfillment_fee",
+              "name": "fulfillment_fee",
+              "type": "string",
+              "value": "={{ $json.fulfillment_fee || $json.body?.fulfillment_fee || '' }}"
+            },
+            {
+              "id": "v1-ad_cost_estimate",
+              "name": "ad_cost_estimate",
+              "type": "string",
+              "value": "={{ $json.ad_cost_estimate || $json.body?.ad_cost_estimate || '' }}"
+            }
+          ]
+        }
+      },
+      "typeVersion": 3.4
+    },
+    {
+      "id": "657db23a-996b-43aa-b3cf-8148e1e6aaa5",
+      "name": "Crawlee + Playwright 免费抓取 Amazon 页面",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [
+        -768,
+        656
+      ],
+      "parameters": {
+        "method": "POST",
+        "url": "http://amazon-crawler:8787/scrape",
+        "authentication": "none",
+        "sendHeaders": true,
+        "specifyHeaders": "keypair",
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "Content-Type",
+              "value": "application/json"
+            },
+            {
+              "name": "Accept",
+              "value": "application/json"
+            }
+          ]
+        },
+        "sendBody": true,
+        "contentType": "json",
+        "specifyBody": "json",
+        "jsonBody": "={{ { url: $json.product_url, timeoutMs: 45000 } }}",
+        "options": {
+          "response": {
+            "response": {
+              "responseFormat": "json"
+            }
+          }
+        }
+      },
+      "retryOnFail": true,
+      "typeVersion": 4.4
+    },
+    {
+      "id": "33ee2b31-cb2e-45a5-8cee-b404ac83faca",
+      "name": "Extract Product Details",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        -464,
+        704
+      ],
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\n\nif (!response.ok) {\n  throw new Error('本地 Crawlee 爬虫失败：' + (response.error || '未知错误'));\n}\n\nconst priceNumber = Number(response.price_number || 0);\nconst ratingNumber = Number(response.rating_number || 0);\nconst reviewsNumber = Number(response.reviews_number || 0);\n\nreturn [\n  {\n    json: {\n      source: response.source || 'Crawlee + Playwright local',\n      product_url: response.requested_url || response.loaded_url || '暂无数据',\n      loaded_url: response.loaded_url || '暂无数据',\n      asin: response.asin || '暂无数据',\n      title: response.title || response.page_title || '暂无数据',\n      brand: response.brand || '暂无数据',\n      price_hint: response.price || '暂无数据',\n      price_number: Number.isFinite(priceNumber) ? priceNumber : 0,\n      rating_hint: response.rating || '暂无数据',\n      rating_number: Number.isFinite(ratingNumber) ? ratingNumber : 0,\n      reviews_hint: response.reviews || '暂无数据',\n      reviews_number: Number.isFinite(reviewsNumber) ? reviewsNumber : 0,\n      availability: response.availability || '暂无数据',\n      breadcrumbs: response.breadcrumbs || [],\n      bullets: response.bullets || [],\n      product_details: response.details || [],\n      description: response.description || '暂无数据',\n      image: response.image || '',\n      blocked: !!response.blocked,\n      raw_page_text: String(response.raw_text || '').slice(0, 30000),\n      extraction_note: response.blocked\n        ? 'Amazon 返回了验证码或机器人检测页面；这是免费本地爬虫的限制，可能需要换链接、稍后重试或降低频率。'\n        : '数据来自本机 Crawlee + Playwright 免费爬虫服务。'\n    }\n  }\n];"
+      },
+      "typeVersion": 2
+    },
+    {
+      "id": "19bb1c74-3200-437e-abd8-6cd2f76e06f6",
+      "name": "Extract Ads",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        -464,
+        272
+      ],
+      "parameters": {
+        "jsCode": "const response = $input.first().json;\n\nif (!response.ok) {\n  throw new Error('本地 Crawlee 爬虫失败：' + (response.error || '未知错误'));\n}\n\nconst priceNumber = Number(response.price_number || 0);\nconst ratingNumber = Number(response.rating_number || 0);\nconst reviewsNumber = Number(response.reviews_number || 0);\nconst asin = response.asin || '暂无数据';\nconst hasAsin = asin !== '暂无数据';\n\nreturn [\n  {\n    json: {\n      source: response.source || 'Crawlee + Playwright local',\n      total_items: 1,\n      unique_asins: hasAsin ? 1 : 0,\n      duplicated_asins_with_counts: {},\n      asin,\n      title: response.title || response.page_title || '暂无数据',\n      brand: response.brand || '暂无数据',\n      price: response.price || '暂无数据',\n      price_number: Number.isFinite(priceNumber) ? priceNumber : 0,\n      rating: response.rating || '暂无数据',\n      rating_number: Number.isFinite(ratingNumber) ? ratingNumber : 0,\n      reviews: response.reviews || '暂无数据',\n      reviews_number: Number.isFinite(reviewsNumber) ? reviewsNumber : 0,\n      availability: response.availability || '暂无数据',\n      categories: response.breadcrumbs || [],\n      bullets: response.bullets || [],\n      ads: [],\n      items: [\n        {\n          asin,\n          title: response.title || '暂无数据',\n          brand: response.brand || '暂无数据',\n          price: response.price || '暂无数据',\n          price_number: Number.isFinite(priceNumber) ? priceNumber : 0,\n          rating: response.rating || '暂无数据',\n          rating_number: Number.isFinite(ratingNumber) ? ratingNumber : 0,\n          reviews: response.reviews || '暂无数据',\n          reviews_number: Number.isFinite(reviewsNumber) ? reviewsNumber : 0,\n          availability: response.availability || '暂无数据'\n        }\n      ],\n      raw_page_text: String(response.raw_text || '').slice(0, 18000),\n      extraction_note: '本节点把 Crawlee + Playwright 返回的页面字段整理成原分析模板可用的数据结构。'\n    }\n  }\n];"
+      },
+      "typeVersion": 2
+    },
+    {
+      "id": "5578b6bc-9b76-43f6-a7c4-3f16648a29c1",
+      "name": "阿里百炼 Chat Model",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "position": [
+        -32,
+        656
+      ],
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "qwen-turbo"
+        },
+        "options": {}
+      },
+      "credentials": {
+        "openAiApi": {
+          "id": "bailianOpenAiCompatible",
+          "name": "阿里百炼 OpenAI兼容 API"
+        }
+      },
+      "typeVersion": 1.2
+    },
+    {
+      "id": "ecd8d612-ba33-4098-ab15-d42b916606bb",
+      "name": "Structured Output Parser",
+      "type": "@n8n/n8n-nodes-langchain.outputParserStructured",
+      "position": [
+        176,
+        656
+      ],
+      "parameters": {
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"summary\": {\n      \"type\": \"string\",\n      \"description\": \"简体中文商品摘要\"\n    }\n  }\n}"
+      },
+      "typeVersion": 1.3
+    },
+    {
+      "id": "1170e95d-5995-4f7f-8abe-4a528b7780d9",
+      "name": "阿里百炼 Chat Model for Amazon Product Mining",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "position": [
+        16,
+        272
+      ],
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "qwen-turbo"
+        },
+        "options": {}
+      },
+      "credentials": {
+        "openAiApi": {
+          "id": "bailianOpenAiCompatible",
+          "name": "阿里百炼 OpenAI兼容 API"
+        }
+      },
+      "typeVersion": 1.2
+    },
+    {
+      "id": "dddc5c80-7161-4b0e-bc4a-146d207550a7",
+      "name": "Product Insights",
+      "type": "@n8n/n8n-nodes-langchain.informationExtractor",
+      "position": [
+        16,
+        96
+      ],
+      "parameters": {
+        "text": "=请基于以下 Crawlee + Playwright 抓取到的 Amazon 商品数据生成中文商品情报分析结果。\\n\\n要求：\\n1. 所有可读文本字段必须使用简体中文。\\n2. 已提取到的 price_number、rating_number、reviews_number 要优先使用，不要改成 0。\\n3. 缺失数据写“暂无数据”，不要编造。\\n4. 输出必须严格符合 schema。\\n\\n{{ $json.toJsonString() }}",
+        "options": {},
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"$schema\": \"http://json-schema.org/draft-07/schema#\",\n  \"title\": \"Amazon Product Data Mining Schema\",\n  \"type\": \"object\",\n  \"properties\": {\n    \"summary\": {\n      \"type\": \"object\",\n      \"properties\": {\n        \"total_items\": {\n          \"type\": \"integer\"\n        },\n        \"unique_asins\": {\n          \"type\": \"integer\"\n        },\n        \"duplicated_asins_with_counts\": {\n          \"type\": \"object\",\n          \"additionalProperties\": {\n            \"type\": \"integer\"\n          }\n        },\n        \"average_price\": {\n          \"type\": \"number\"\n        },\n        \"min_price\": {\n          \"type\": \"number\"\n        },\n        \"max_price\": {\n          \"type\": \"number\"\n        },\n        \"average_reviews\": {\n          \"type\": \"number\"\n        }\n      },\n      \"required\": [\n        \"total_items\",\n        \"unique_asins\",\n        \"duplicated_asins_with_counts\",\n        \"average_price\",\n        \"min_price\",\n        \"max_price\",\n        \"average_reviews\"\n      ]\n    },\n    \"product_insights\": {\n      \"type\": \"object\",\n      \"properties\": {\n        \"best_value_item\": {\n          \"type\": \"object\",\n          \"properties\": {\n            \"asin\": {\n              \"type\": \"string\"\n            },\n            \"price\": {\n              \"type\": \"number\"\n            },\n            \"reviews\": {\n              \"type\": \"integer\"\n            }\n          },\n          \"required\": [\n            \"asin\",\n            \"price\",\n            \"reviews\"\n          ]\n        },\n        \"most_reviewed_item\": {\n          \"type\": \"object\",\n          \"properties\": {\n            \"asin\": {\n              \"type\": \"string\"\n            },\n            \"price\": {\n              \"type\": \"number\"\n            },\n            \"reviews\": {\n              \"type\": \"integer\"\n            }\n          },\n          \"required\": [\n            \"asin\",\n            \"price\",\n            \"reviews\"\n          ]\n        },\n        \"price_distribution\": {\n          \"type\": \"object\",\n          \"properties\": {\n            \"low_price\": {\n              \"type\": \"number\"\n            },\n            \"high_price\": {\n              \"type\": \"number\"\n            }\n          },\n          \"required\": [\n            \"low_price\",\n            \"high_price\"\n          ]\n        },\n        \"prime_eligibility_percentage\": {\n          \"type\": \"string\",\n          \"description\": \"\\u7528\\u7b80\\u4f53\\u4e2d\\u6587\\u8bf4\\u660e Prime \\u8d44\\u683c\\u5360\\u6bd4\\u6216\\u8986\\u76d6\\u60c5\\u51b5\"\n        },\n        \"rating_insights\": {\n          \"type\": \"string\",\n          \"description\": \"\\u7528\\u7b80\\u4f53\\u4e2d\\u6587\\u8bf4\\u660e\\u8bc4\\u5206\\u548c\\u8bc4\\u8bba\\u6d1e\\u5bdf\"\n        }\n      },\n      \"required\": [\n        \"best_value_item\",\n        \"most_reviewed_item\",\n        \"price_distribution\",\n        \"prime_eligibility_percentage\",\n        \"rating_insights\"\n      ]\n    },\n    \"metadata\": {\n      \"type\": \"object\",\n      \"properties\": {\n        \"type_distribution\": {\n          \"type\": \"object\",\n          \"additionalProperties\": {\n            \"type\": \"integer\"\n          }\n        },\n        \"location_distribution\": {\n          \"type\": \"object\",\n          \"additionalProperties\": {\n            \"type\": \"integer\"\n          }\n        },\n        \"image_quality_notes\": {\n          \"type\": \"string\"\n        }\n      },\n      \"required\": [\n        \"type_distribution\",\n        \"location_distribution\",\n        \"image_quality_notes\"\n      ]\n    },\n    \"recommendations\": {\n      \"type\": \"object\",\n      \"properties\": {\n        \"remove_duplicates\": {\n          \"type\": \"string\"\n        },\n        \"pricing_strategy\": {\n          \"type\": \"string\"\n        },\n        \"listing_quality_improvements\": {\n          \"type\": \"string\"\n        }\n      },\n      \"required\": [\n        \"remove_duplicates\",\n        \"pricing_strategy\",\n        \"listing_quality_improvements\"\n      ]\n    }\n  },\n  \"required\": [\n    \"summary\",\n    \"product_insights\",\n    \"metadata\",\n    \"recommendations\"\n  ]\n}"
+      },
+      "retryOnFail": true,
+      "typeVersion": 1.2
+    },
+    {
+      "id": "a09fa319-7cae-4c50-8082-896fb2112634",
+      "name": "Product Descriptive Summarizer",
+      "type": "@n8n/n8n-nodes-langchain.chainLlm",
+      "position": [
+        0,
+        464
+      ],
+      "parameters": {
+        "text": "=请基于以下 Amazon 商品详情，输出一份适合跨境电商选品和竞品分析使用的中文商品描述总结。\\n\\n要求：\\n1. 全部使用简体中文。\\n2. 包含：产品定位、核心卖点、主要规格或功能、适合人群、潜在风险。\\n3. 不要编造没有出现的数据。\\n\\n{{ $json.toJsonString() }}",
+        "batching": {},
+        "messages": {
+          "messageValues": [
+            {
+              "message": "你是资深跨境电商商品分析师。所有输出必须使用简体中文，面向 Amazon 和独立站卖家。"
+            }
+          ]
+        },
+        "promptType": "define",
+        "hasOutputParser": true
+      },
+      "retryOnFail": true,
+      "typeVersion": 1.7
+    },
+    {
+      "id": "de650da3-dd97-46d1-8942-7e197d6ec700",
+      "name": "Sticky Note",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -1120,
+        864
+      ],
+      "parameters": {
+        "color": 6,
+        "width": 448,
+        "height": 320,
+        "content": "### 处理步骤\n\n1. Crawlee + Playwright 本地免费抓取 Amazon 商品页。\n2. 提取商品详情、价格、评分、评论数等字段。\n3. 阿里百炼生成中文商品摘要、竞品分析和选品洞察。\n4. 写入本地 HTML 可视化报告和 CSV 数据备份。"
+      },
+      "typeVersion": 1
+    },
+    {
+      "id": "d05add22-08e0-4deb-8373-d5367210e2f2",
+      "name": "Sticky Note1",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -1664,
+        240
+      ],
+      "parameters": {
+        "width": 464,
+        "height": 736,
+        "content": "## 工作流说明\n\n这个工作流会自动抓取 Amazon 商品数据，用阿里百炼做中文分析，并生成本地 HTML 报告和 CSV 备份。\n\n## 需要配置\n\n- 免费抓取：Crawlee + Playwright 本地服务（不需要 API Key）\n- 阿里百炼 OpenAI 兼容 API Key\n- n8n 容器挂载 output 目录到 /files\n\n## 可自定义\n\n- 修改商品链接\n- 更换阿里百炼模型\n- 修改中文输出字段\n- 后续升级为 CSV 批量输入和总览看板"
+      },
+      "typeVersion": 1
+    },
+    {
+      "id": "248c3649-c919-46f2-822d-90d2d0f7c569",
+      "name": "Sticky Note2",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -176,
+        -208
+      ],
+      "parameters": {
+        "color": 6,
+        "width": 576,
+        "height": 144,
+        "content": "### 阿里百炼多阶段中文分析\n\n这里会生成商品洞察、商品描述总结和竞品分析。所有 AI 输出默认使用简体中文。"
+      },
+      "typeVersion": 1
+    },
+    {
+      "id": "ba3af54b-71b9-40fe-bf3a-34fe3d020be2",
+      "name": "Sticky Note5",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -1664,
+        -64
+      ],
+      "parameters": {
+        "color": 3,
+        "width": 464,
+        "height": 288,
+        "content": "## 3. 汇总分析结果"
+      },
+      "typeVersion": 1
+    },
+    {
+      "id": "e8492c0a-3fce-4477-b1c6-e5138952026e",
+      "name": "Competitive Analysis",
+      "type": "@n8n/n8n-nodes-langchain.informationExtractor",
+      "position": [
+        0,
+        832
+      ],
+      "parameters": {
+        "text": "=请分析以下 Amazon 商品详情，并用简体中文输出竞品定位分析。\\n\\n请重点回答：\\n1. 市场定位是什么。\\n2. 主要竞争优势是什么。\\n3. 可能的劣势和转化风险是什么。\\n4. 适合的标题、五点描述和广告角度。\\n5. 给跨境卖家的选品建议。\\n\\n要求：全部使用简体中文，不要编造数据。\\n\\n{{ $json.toJsonString() }}",
+        "options": {},
+        "schemaType": "manual",
+        "inputSchema": "{\n  \"type\": \"object\",\n  \"properties\": {\n    \"competitive_analysis\": {\n      \"type\": \"string\",\n      \"description\": \"用简体中文输出的竞品定位、优势劣势、广告角度和选品建议\"\n    }\n  }\n}"
+      },
+      "retryOnFail": true,
+      "typeVersion": 1.2
+    },
+    {
+      "id": "0ef2f0ba-04da-4553-a81e-1db94d32b09d",
+      "name": "阿里百炼 Chat Model for Competitive Analysis",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "position": [
+        0,
+        1008
+      ],
+      "parameters": {
+        "model": {
+          "__rl": true,
+          "mode": "list",
+          "value": "qwen-turbo"
+        },
+        "options": {}
+      },
+      "credentials": {
+        "openAiApi": {
+          "id": "bailianOpenAiCompatible",
+          "name": "阿里百炼 OpenAI兼容 API"
+        }
+      },
+      "typeVersion": 1.2
+    },
+    {
+      "id": "6b9b801b-5e6c-4e56-81cd-c590cb6d8f57",
+      "name": "Sticky Note3",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -576,
+        32
+      ],
+      "parameters": {
+        "color": 7,
+        "width": 336,
+        "height": 1152,
+        "content": "## 1. 商品数据抓取"
+      },
+      "typeVersion": 1
+    },
+    {
+      "id": "463e0813-badb-45b0-bc98-523fb0b8f907",
+      "name": "Sticky Note4",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -176,
+        -64
+      ],
+      "parameters": {
+        "color": 7,
+        "width": 576,
+        "height": 1248,
+        "content": "## 2. 阿里百炼中文洞察分析"
+      },
+      "typeVersion": 1
+    },
+    {
+      "id": "2d285795-4baf-4052-8169-9e438e195c0a",
+      "name": "生成 HTML 可视化报告",
+      "type": "n8n-nodes-base.code",
+      "position": [
+        976,
+        464
+      ],
+      "parameters": {
+        "jsCode": "const fs = require('fs');\n\nconst env = typeof process !== 'undefined' && process.env ? process.env : {};\nconst outputDir = env.AMAZON_REPORT_OUTPUT_DIR || '/files/amazon_product_analysis';\nconst reportDir = outputDir + '/reports';\nconst csvFile = outputDir + '/amazon_product_analysis.csv';\nconst latestHtml = outputDir + '/amazon_product_analysis_latest.html';\nconst overviewHtml = outputDir + '/amazon_product_analysis_overview.html';\nconst competitorSnapshotFile = env.AMAZON_COMPETITOR_SNAPSHOT_FILE || outputDir + '/competitor_snapshot_latest.json';\nconst dataSourcesConfigFile = env.AMAZON_DATA_SOURCES_CONFIG_FILE || outputDir + '/data_sources.local.json';\nconst windowsOutputDir =\n  env.AMAZON_REPORT_WINDOWS_DIR ||\n  'C:\\\\Users\\\\96259\\\\Desktop\\\\AIcoding\\\\codex02\\\\AIkuajing\\\\output\\\\amazon_product_analysis';\nconst skipCsvAppend = env.AMAZON_REPORT_PREVIEW_NO_CSV === '1';\n\nfunction csvEscape(value) {\n  const text = value == null ? '' : String(value);\n  return '\"' + text.replace(/\"/g, '\"\"') + '\"';\n}\n\nfunction htmlEscape(value) {\n  const text = value == null ? '' : String(value);\n  return text\n    .replace(/&/g, '&amp;')\n    .replace(/</g, '&lt;')\n    .replace(/>/g, '&gt;')\n    .replace(/\"/g, '&quot;')\n    .replace(/'/g, '&#39;');\n}\n\nfunction oneLine(value) {\n  if (value == null) return '';\n  if (typeof value !== 'string') value = JSON.stringify(value);\n  return value.replace(/\\r?\\n/g, ' ').replace(/\\s+/g, ' ').trim();\n}\n\nfunction paragraph(value) {\n  const text = oneLine(value);\n  return text && text !== '暂无数据' ? text : '暂无数据';\n}\n\nfunction firstUseful(...values) {\n  for (const value of values) {\n    const text = oneLine(value);\n    if (text && text !== '0' && text !== '暂无数据' && text !== 'null' && text !== 'undefined') return text;\n  }\n  return '暂无数据';\n}\n\nfunction hasUseful(value) {\n  return firstUseful(value) !== '暂无数据';\n}\n\nfunction toNumber(value) {\n  if (typeof value === 'number' && Number.isFinite(value)) return value;\n  const text = oneLine(value).replace(/,/g, '');\n  const match = text.match(/\\d+(?:\\.\\d+)?/);\n  return match ? Number(match[0]) : 0;\n}\n\nfunction clamp(value, min, max) {\n  return Math.max(min, Math.min(max, value));\n}\n\nfunction shorten(value, max = 150) {\n  const text = paragraph(value);\n  if (text === '暂无数据' || text.length <= max) return text;\n  return text.slice(0, max - 1).trim() + '…';\n}\n\nfunction parseList(value) {\n  if (Array.isArray(value)) return value.map(paragraph).filter((item) => item !== '暂无数据');\n  const text = oneLine(value);\n  if (!text || text === '暂无数据') return [];\n  return text\n    .split(/[,，;；\\n]/)\n    .map((item) => item.trim())\n    .filter(Boolean);\n}\n\nfunction normalizeAsin(value) {\n  const text = oneLine(value).toUpperCase().replace(/[^A-Z0-9]/g, '');\n  return text.length === 10 ? text : '';\n}\n\nfunction normalizeMarketplace(value) {\n  const text = oneLine(value).toLowerCase();\n  if (!text || text === '暂无数据') return '';\n  if (text.startsWith('amazon.')) return text;\n  const map = {\n    in: 'amazon.in',\n    india: 'amazon.in',\n    us: 'amazon.com',\n    usa: 'amazon.com',\n    com: 'amazon.com',\n    uk: 'amazon.co.uk',\n    gb: 'amazon.co.uk',\n    ca: 'amazon.ca',\n    de: 'amazon.de',\n    fr: 'amazon.fr',\n    it: 'amazon.it',\n    es: 'amazon.es',\n    jp: 'amazon.co.jp',\n  };\n  return map[text] || text;\n}\n\nfunction readJsonFile(filePath) {\n  try {\n    if (!fs.existsSync(filePath)) return { ok: false, reason: '文件不存在' };\n    const raw = fs.readFileSync(filePath, 'utf8').replace(/^\\uFEFF/, '');\n    const stat = fs.statSync(filePath);\n    return { ok: true, data: JSON.parse(raw), filePath, mtime: stat.mtime.toISOString() };\n  } catch (error) {\n    return { ok: false, reason: error.message || '读取失败', filePath };\n  }\n}\n\nconst DEFAULT_DATA_SOURCE_CONFIG = {\n  sources: {\n    crawlee: {\n      label: '页面抓取',\n      status: 'enabled',\n      detail: 'Crawlee + Playwright 本地低频抓取，免费兜底数据源。',\n      priority: 1,\n    },\n    manual_inputs: {\n      label: '手工增强字段',\n      status: 'optional',\n      detail: '成本、目标售价、关键词、竞品 ASIN 和运营备注。',\n      priority: 2,\n    },\n    competitor_snapshot: {\n      label: '竞品快照',\n      status: 'enabled',\n      detail: '读取 competitor_snapshot_latest.json，作为低频竞品价格、评分、评论对照。',\n      priority: 3,\n    },\n    keepa: {\n      label: 'Keepa 历史趋势',\n      status: 'not_connected',\n      detail: '预留历史价格、BSR、Buy Box、卖家数和库存趋势。',\n      priority: 4,\n    },\n    sp_api: {\n      label: 'SP-API / Brand Analytics',\n      status: 'not_connected',\n      detail: '预留 Catalog、Fees、Reports、Search Query Performance 和 Brand Analytics。',\n      priority: 5,\n    },\n    amazon_ads_api: {\n      label: 'Amazon Ads API',\n      status: 'not_connected',\n      detail: '预留关键词表现、广告报表、ACOS、TACOS 和投放验证数据。',\n      priority: 6,\n    },\n  },\n};\n\nfunction statusFromConfig(value, fallback = '未接入') {\n  const status = oneLine(value).toLowerCase();\n  if (!status || status === '暂无数据') return fallback;\n  const map = {\n    enabled: '已接入',\n    connected: '已接入',\n    active: '已接入',\n    configured: '已配置',\n    optional: '可选',\n    partial: '部分提供',\n    not_connected: '未接入',\n    reserved: '未接入',\n    disabled: '未接入',\n    missing_config: '配置缺失',\n  };\n  return map[status] || oneLine(value);\n}\n\nfunction loadDataSourceConfig() {\n  const loaded = readJsonFile(dataSourcesConfigFile);\n  const userSources = loaded.ok && loaded.data?.sources && typeof loaded.data.sources === 'object' ? loaded.data.sources : {};\n  const sources = {};\n  for (const [key, defaults] of Object.entries(DEFAULT_DATA_SOURCE_CONFIG.sources)) {\n    const userSource = userSources[key] && typeof userSources[key] === 'object' ? userSources[key] : {};\n    sources[key] = { ...defaults, ...userSource };\n  }\n  return {\n    ok: loaded.ok,\n    file: loaded.filePath || dataSourcesConfigFile,\n    reason: loaded.reason || '',\n    updated_at: loaded.ok ? firstUseful(loaded.data?.updated_at, loaded.mtime) : '暂无数据',\n    last_checked_at: loaded.ok ? firstUseful(loaded.data?.last_checked_at) : '暂无数据',\n    owner_notes: loaded.ok ? firstUseful(loaded.data?.owner_notes) : '暂无数据',\n    sources,\n  };\n}\n\nfunction configuredSource(config, key, statusOverride = '', detailOverride = '') {\n  const source = config.sources[key] || DEFAULT_DATA_SOURCE_CONFIG.sources[key] || {};\n  const detail = detailOverride || firstUseful(source.detail);\n  const lastCheckedAt = firstUseful(source.last_checked_at);\n  const ownerNotes = firstUseful(source.owner_notes);\n  const metaParts = [];\n  if (lastCheckedAt !== '暂无数据') metaParts.push(`检查：${lastCheckedAt}`);\n  if (ownerNotes !== '暂无数据') metaParts.push(`备注：${ownerNotes}`);\n  return {\n    key,\n    label: firstUseful(source.label, key),\n    status: statusOverride || statusFromConfig(source.status),\n    detail: metaParts.length ? `${detail}；${metaParts.join('；')}` : detail,\n    meta: {\n      mode: firstUseful(source.mode),\n      priority: typeof source.priority === 'number' ? source.priority : null,\n      required_env: Array.isArray(source.required_env) ? source.required_env : [],\n      last_checked_at: lastCheckedAt,\n      owner_notes: ownerNotes,\n    },\n  };\n}\n\nfunction dataSourceStatusByKey(sources, key, fallback = '未接入') {\n  const source = sources.find((item) => item.key === key);\n  return source ? firstUseful(source.status, fallback) : fallback;\n}\n\nfunction normalizeRate(value, fallback = 0) {\n  const number = toNumber(value);\n  if (!number) return fallback;\n  return number > 1 ? number / 100 : number;\n}\n\nfunction moneyText(value) {\n  return Number.isFinite(value) && value > 0 ? value.toFixed(2) : '0.00';\n}\n\nfunction getNodeJson(name) {\n  try {\n    return $node[name].json || {};\n  } catch (error) {\n    return {};\n  }\n}\n\nfunction collectObjects(value, result = [], seen = new Set()) {\n  if (value == null) return result;\n  if (Array.isArray(value)) {\n    value.forEach((item) => collectObjects(item, result, seen));\n    return result;\n  }\n  if (typeof value !== 'object') return result;\n  if (seen.has(value)) return result;\n  seen.add(value);\n  result.push(value);\n  if (value.json) collectObjects(value.json, result, seen);\n  if (value.output) collectObjects(value.output, result, seen);\n  return result;\n}\n\nfunction flattenOutput(aggregate) {\n  if (Array.isArray(aggregate)) return aggregate.map((entry) => entry?.json ?? entry);\n  return [aggregate?.json ?? aggregate].filter(Boolean);\n}\n\nfunction findString(objects, key) {\n  for (const object of objects) {\n    if (typeof object?.[key] === 'string' && object[key].trim()) return object[key];\n  }\n  return '';\n}\n\nfunction findObject(objects, predicate) {\n  return objects.find((object) => object && typeof object === 'object' && predicate(object)) || {};\n}\n\nfunction cleanAvailability(value) {\n  const text = paragraph(value);\n  if (text === '暂无数据') return text;\n  return text.split('{')[0].replace(/\\s+/g, ' ').trim() || '暂无数据';\n}\n\nfunction sectionize(text, labels) {\n  const source = paragraph(text);\n  if (source === '暂无数据') return [];\n  const escaped = labels.map((label) => label.replace(/[.*+?^${}()|[\\]\\\\]/g, '\\\\$&'));\n  const regex = new RegExp(`(?:^|\\\\s)(?:\\\\d+[.、．]\\\\s*)?(${escaped.join('|')})[：:]`, 'g');\n  const matches = [];\n  let match;\n  while ((match = regex.exec(source)) !== null) {\n    matches.push({ label: match[1], index: match.index, end: regex.lastIndex });\n  }\n  if (!matches.length) return [];\n  return matches\n    .map((entry, index) => {\n      const next = matches[index + 1];\n      return {\n        label: entry.label,\n        text: source.slice(entry.end, next ? next.index : source.length).trim(),\n      };\n    })\n    .filter((entry) => entry.text);\n}\n\nfunction listHtml(items, limit = 5) {\n  const safeItems = Array.isArray(items) ? items.map(paragraph).filter((item) => item !== '暂无数据') : [];\n  if (!safeItems.length) return '<p class=\"muted\">暂无数据</p>';\n  return `<ul>${safeItems\n    .slice(0, limit)\n    .map((item) => `<li>${htmlEscape(shorten(item, 150))}</li>`)\n    .join('')}</ul>`;\n}\n\nfunction objectListHtml(items, limit = 4) {\n  const safeItems = Array.isArray(items) ? items.filter(Boolean).slice(0, limit) : [];\n  if (!safeItems.length) return '<p class=\"muted\">暂无数据</p>';\n  return `<ul>${safeItems\n    .map((item) => {\n      const title = item.label || item.title || item.severity || '项目';\n      const text = item.text || item.value || item.action || item.reason || '';\n      return `<li><strong>${htmlEscape(shorten(title, 36))}</strong>${text ? `：${htmlEscape(shorten(text, 130))}` : ''}</li>`;\n    })\n    .join('')}</ul>`;\n}\n\nfunction tableHtml(headers, rows) {\n  if (!Array.isArray(rows) || !rows.length) return '<p class=\"muted\">暂无数据</p>';\n  return `\n    <div class=\"table-wrap\">\n      <table>\n        <thead><tr>${headers.map((header) => `<th>${htmlEscape(header)}</th>`).join('')}</tr></thead>\n        <tbody>\n          ${rows\n            .map((row) => `<tr>${row.map((cell) => `<td>${htmlEscape(cell)}</td>`).join('')}</tr>`)\n            .join('')}\n        </tbody>\n      </table>\n    </div>`;\n}\n\nfunction sectionCards(sections, fallback, limit = 5) {\n  const usable = sections.slice(0, limit);\n  if (!usable.length) {\n    return `<div class=\"text-panel\"><p>${htmlEscape(shorten(fallback, 360))}</p></div>`;\n  }\n  return usable\n    .map(\n      (section) => `\n        <article class=\"mini-card\">\n          <div class=\"mini-label\">${htmlEscape(section.label)}</div>\n          <p>${htmlEscape(shorten(section.text, 190))}</p>\n        </article>`,\n    )\n    .join('');\n}\n\nfunction bar(label, valueText, width, tone = '') {\n  return `\n    <div class=\"bar-row\">\n      <div class=\"bar-head\"><span>${htmlEscape(label)}</span><strong>${htmlEscape(valueText)}</strong></div>\n      <div class=\"bar-track\"><span class=\"${tone}\" style=\"width:${clamp(width, 4, 100).toFixed(0)}%\"></span></div>\n    </div>`;\n}\n\nfunction deriveScore({ priceNumber, ratingNumber, reviewsNumber, blocked }) {\n  if (blocked) return 38;\n  let score = 34;\n  if (ratingNumber > 0) score += clamp((ratingNumber - 3.4) / 1.4, 0, 1) * 30;\n  if (reviewsNumber > 0) score += clamp(Math.log10(reviewsNumber + 1) / 4, 0, 1) * 24;\n  if (priceNumber > 0) score += 8;\n  return Math.round(clamp(score, 20, 92));\n}\n\nfunction decisionLabel(score, blocked) {\n  if (blocked) return '页面疑似受限，先换链接或重试';\n  if (score >= 80) return '进入供应链和小批量验证';\n  if (score >= 65) return '进入下一轮评估';\n  if (score >= 50) return '暂缓，先补齐关键数据';\n  return '不建议推进或需要人工复核';\n}\n\nfunction decisionClass(label) {\n  if (label.includes('受限') || label.includes('不足')) return 'warn';\n  if (label.includes('观察')) return 'mid';\n  return 'good';\n}\n\nfunction buildFocusPoints({ price, rating, reviews, availability, ratingNumber, reviewsNumber, blocked }) {\n  if (blocked) {\n    return [\n      '页面可能触发验证码或机器人检测，先降低频率或换商品链接验证。',\n      '当前报告不应作为选品结论，只能作为抓取状态记录。',\n      '重新抓取前先确认浏览器能正常打开该 Amazon 页面。',\n    ];\n  }\n  const points = [];\n  points.push(reviewsNumber > 0 ? `需求验证：已抓到评论数 ${reviews}，可作为热度判断入口。` : '需求验证：评论数缺失，先补抓或手动确认。');\n  points.push(ratingNumber > 0 ? `口碑信号：评分 ${rating}，后续重点看低星差评原因。` : '口碑信号：评分缺失，暂不判断口碑强弱。');\n  points.push(price !== '暂无数据' ? `价格信号：当前价格 ${price}，适合继续对比同类价格带。` : '价格信号：价格缺失，先确认页面是否展示价格。');\n  if (availability !== '暂无数据') points.push(`库存状态：${availability}。`);\n  return points.slice(0, 4);\n}\n\nfunction buildDecisionModel({\n  blocked,\n  price,\n  rating,\n  reviews,\n  availability,\n  priceNumber,\n  ratingNumber,\n  reviewsNumber,\n  bullets,\n  productDetails,\n  summary,\n  competitiveAnalysis,\n  riskText,\n  manual,\n}) {\n  if (blocked) {\n    const breakdown = [\n      { key: 'demand', label: '需求强度', score: 2, max: 20, evidence: '页面受限，不能用评论/热度判断需求。' },\n      { key: 'competition', label: '竞争可控', score: 2, max: 15, evidence: '竞品和广告信息不足。' },\n      { key: 'profit', label: '利润空间', score: 3, max: 20, evidence: '价格或成本信息不足。' },\n      { key: 'listing', label: 'Listing 机会', score: 2, max: 15, evidence: '页面内容抓取不完整。' },\n      { key: 'reputation', label: '口碑风险', score: 2, max: 10, evidence: '评分和评论不足。' },\n      { key: 'operations', label: '运营复杂度', score: 3, max: 10, evidence: '尺寸、库存和合规信息不足。' },\n      { key: 'trust', label: '数据可信度', score: 1, max: 10, evidence: '疑似验证码或 Continue Shopping 页面。' },\n    ];\n    return { score: 15, breakdown };\n  }\n\n  const demand = clamp(\n    6 + (reviewsNumber > 0 ? clamp(Math.log10(reviewsNumber + 1) / 4, 0, 1) * 10 : 0) + (priceNumber > 0 ? 2 : 0) + (ratingNumber > 0 ? 2 : 0),\n    3,\n    20,\n  );\n  const competition = clamp(\n    12 -\n      (reviewsNumber > 8000 ? 5 : reviewsNumber > 2500 ? 3 : reviewsNumber > 800 ? 1 : 0) +\n      (manual.competitorAsins.length ? 1 : 0),\n    4,\n    15,\n  );\n  const profitDetail = buildProfitDetail({ manual, priceNumber });\n  const profit = profitDetail.net_margin == null ? 10 : clamp(5 + profitDetail.net_margin * 42, 2, 20);\n  const listing = clamp(\n    5 + Math.min(bullets.length, 5) * 1.2 + Math.min(productDetails.length, 4) * 0.8 + (manual.targetKeywords.length ? 2 : 0),\n    3,\n    15,\n  );\n  const reputation = clamp(ratingNumber > 0 ? 3 + ((ratingNumber - 3.2) / 1.6) * 7 : 5, 2, 10);\n  const operations = clamp(\n    6 +\n      (availability !== '暂无数据' ? 1 : 0) +\n      (manual.marketplace !== '暂无数据' ? 1 : 0) -\n      (riskText !== '暂无数据' && /漂移|质量|退货|损坏|风险|限制|合规|安全/.test(riskText) ? 2 : 0),\n    2,\n    10,\n  );\n  const coverageFields = [\n    price !== '暂无数据',\n    rating !== '暂无数据',\n    reviews !== '暂无数据',\n    bullets.length > 0,\n    productDetails.length > 0,\n    summary !== '暂无数据',\n    competitiveAnalysis !== '暂无数据',\n    manual.targetKeywords.length > 0,\n    manual.landedCost > 0 || manual.targetPrice > 0,\n    manual.competitorAsins.length > 0,\n  ];\n  const trust = clamp((coverageFields.filter(Boolean).length / coverageFields.length) * 10, 2, 10);\n\n  const breakdown = [\n    { key: 'demand', label: '需求强度', score: demand, max: 20, evidence: reviewsNumber > 0 ? `评论数 ${reviews}，可作为需求热度弱信号。` : '缺少评论数，需求判断偏弱。' },\n    { key: 'competition', label: '竞争可控', score: competition, max: 15, evidence: reviewsNumber > 2500 ? '评论护城河较高，竞争压力偏大。' : '评论护城河尚可，后续需补竞品集合。' },\n    {\n      key: 'profit',\n      label: '利润空间',\n      score: profit,\n      max: 20,\n      evidence:\n        profitDetail.net_margin == null\n          ? '未提供成本，利润只能给中性分。'\n          : `扣除成本、运费、平台费、履约费和广告预算后，估算净利率 ${(profitDetail.net_margin * 100).toFixed(1)}%。`,\n    },\n    { key: 'listing', label: 'Listing 机会', score: listing, max: 15, evidence: manual.targetKeywords.length ? '已提供目标关键词，可评估覆盖缺口。' : '未提供目标关键词，Listing 机会判断有限。' },\n    { key: 'reputation', label: '口碑风险', score: reputation, max: 10, evidence: ratingNumber > 0 ? `评分 ${rating}，需继续拆解低星评论。` : '评分缺失，口碑风险未知。' },\n    { key: 'operations', label: '运营复杂度', score: operations, max: 10, evidence: availability !== '暂无数据' ? `库存状态：${availability}` : '库存和物流复杂度字段不足。' },\n    { key: 'trust', label: '数据可信度', score: trust, max: 10, evidence: '按页面字段、AI 输出和手工字段覆盖率计算。' },\n  ];\n  return { score: Math.round(breakdown.reduce((sum, item) => sum + item.score, 0)), breakdown };\n}\n\nfunction buildProfitDetail({ manual, priceNumber }) {\n  const salePrice = manual.targetPrice || priceNumber;\n  const platformFeeRate = manual.platformFee > 0 ? 0 : normalizeRate(manual.platformFeeRate, 0.15);\n  const platformFee = manual.platformFee > 0 ? manual.platformFee : salePrice > 0 ? salePrice * platformFeeRate : 0;\n  const totalCost =\n    manual.landedCost +\n    manual.shippingCost +\n    platformFee +\n    manual.fulfillmentFee +\n    manual.adCostEstimate;\n  const netProfit = salePrice > 0 ? salePrice - totalCost : 0;\n  const netMargin = manual.landedCost > 0 && salePrice > 0 ? netProfit / salePrice : null;\n  return {\n    sale_price: salePrice || 0,\n    landed_cost: manual.landedCost || 0,\n    shipping_cost: manual.shippingCost || 0,\n    platform_fee_rate: platformFeeRate || 0,\n    platform_fee: platformFee || 0,\n    fulfillment_fee: manual.fulfillmentFee || 0,\n    ad_cost_estimate: manual.adCostEstimate || 0,\n    total_cost: totalCost || 0,\n    net_profit: netProfit || 0,\n    net_margin: netMargin,\n    platform_fee_note: manual.platformFee > 0 ? '使用手工输入平台费' : '未输入平台费时按占位费率估算，非官方最终费用',\n  };\n}\n\nfunction buildProfitRows(detail) {\n  if (!detail || !detail.sale_price) return [];\n  const netProfitText = detail.net_margin == null ? '未计算' : moneyText(detail.net_profit);\n  const netProfitNote = detail.net_margin == null ? '缺少采购成本，不能计算净利润' : `净利率 ${(detail.net_margin * 100).toFixed(1)}%`;\n  return [\n    ['目标/页面售价', moneyText(detail.sale_price), 'target_price 优先，缺失时用页面价格数值'],\n    ['采购成本', moneyText(detail.landed_cost), 'landed_cost'],\n    ['物流运费', moneyText(detail.shipping_cost), 'shipping_cost'],\n    ['平台费估算', moneyText(detail.platform_fee), detail.platform_fee_note],\n    ['履约/FBA 费', moneyText(detail.fulfillment_fee), '未输入时按 0 处理'],\n    ['广告预算', moneyText(detail.ad_cost_estimate), 'ad_cost_estimate'],\n    ['估算净利润', netProfitText, netProfitNote],\n  ];\n}\n\nfunction loadCompetitorSnapshot(asins, marketplace, sourceAsin = '') {\n  const wanted = asins.map(normalizeAsin).filter(Boolean);\n  if (!wanted.length) {\n    return {\n      status: '未提供',\n      detail: '未填写竞品 ASIN',\n      file: competitorSnapshotFile,\n      rows: [],\n      matched_count: 0,\n      success_count: 0,\n      failed_count: 0,\n    };\n  }\n\n  const loaded = readJsonFile(competitorSnapshotFile);\n  if (!loaded.ok) {\n    return {\n      status: '未生成',\n      detail: `未读取到竞品快照：${loaded.reason}`,\n      file: competitorSnapshotFile,\n      rows: [],\n      matched_count: 0,\n      success_count: 0,\n      failed_count: 0,\n    };\n  }\n\n  const data = loaded.data || {};\n  const dataSourceAsin = normalizeAsin(data.source_asin);\n  const wantedSourceAsin = normalizeAsin(sourceAsin);\n  if (dataSourceAsin && (!wantedSourceAsin || dataSourceAsin !== wantedSourceAsin)) {\n    return {\n      status: '未匹配',\n      detail: `竞品快照属于主商品 ${dataSourceAsin}，当前商品 ${wantedSourceAsin || '暂无数据'}；请重新运行竞品快照。`,\n      file: loaded.filePath,\n      updated_at: loaded.mtime,\n      dry_run: !!data.dry_run,\n      marketplace: firstUseful(data.marketplace, marketplace),\n      source_asin: dataSourceAsin,\n      source_match: false,\n      competitor_asin_key: firstUseful(data.competitor_asin_key),\n      snapshot_scope_key: firstUseful(data.snapshot_scope_key),\n      rows: wanted.map((asin) => ({\n        asin,\n        status: '待抓取',\n        price: '暂无数据',\n        rating: '暂无数据',\n        reviews: '暂无数据',\n        availability: '暂无数据',\n        title: '',\n        note: '最新竞品快照的主商品 ASIN 不匹配',\n      })),\n      matched_count: 0,\n      success_count: 0,\n      failed_count: 0,\n    };\n  }\n  const sourceRows = Array.isArray(data.results) ? data.results : [];\n  const byAsin = new Map();\n  for (const row of sourceRows) {\n    const key = normalizeAsin(row.input_asin || row.asin);\n    if (key) byAsin.set(key, row);\n  }\n\n  const rows = wanted.map((asin) => {\n    const row = byAsin.get(asin);\n    if (!row) {\n      return {\n        asin,\n        status: '待抓取',\n        price: '暂无数据',\n        rating: '暂无数据',\n        reviews: '暂无数据',\n        availability: '暂无数据',\n        title: '',\n        note: '最新竞品快照未包含该 ASIN',\n      };\n    }\n    const ok = row.status === 'success' || row.ok === true;\n    return {\n      asin,\n      status: ok ? '已抓取' : row.status === 'dry_run' ? 'DryRun' : '抓取失败',\n      price: firstUseful(row.price, row.price_number),\n      rating: firstUseful(row.rating, row.rating_number),\n      reviews: firstUseful(row.reviews, row.reviews_number),\n      availability: firstUseful(row.availability),\n      title: firstUseful(row.title),\n      product_url: firstUseful(row.loaded_url, row.product_url),\n      note: ok ? firstUseful(row.availability, row.category, '已获取价格/评分/评论') : firstUseful(row.error, row.note, '本次快照未成功'),\n    };\n  });\n\n  const successCount = rows.filter((row) => row.status === '已抓取').length;\n  const failedCount = rows.filter((row) => row.status === '抓取失败').length;\n  const marketplaceText = firstUseful(data.marketplace, marketplace);\n  return {\n    status: successCount === wanted.length ? '已接入' : successCount > 0 ? '部分成功' : data.dry_run ? 'DryRun' : '未完成',\n    detail:\n      successCount > 0\n        ? `快照站点 ${marketplaceText}，匹配 ${successCount}/${wanted.length} 个竞品，更新时间 ${loaded.mtime || '暂无数据'}`\n        : `快照已读取，但尚未匹配成功竞品，更新时间 ${loaded.mtime || '暂无数据'}`,\n    file: loaded.filePath,\n    updated_at: loaded.mtime,\n    dry_run: !!data.dry_run,\n    marketplace: marketplaceText,\n    source_asin: dataSourceAsin,\n    source_match: !dataSourceAsin || !wantedSourceAsin || dataSourceAsin === wantedSourceAsin,\n    competitor_asin_key: firstUseful(data.competitor_asin_key),\n    snapshot_scope_key: firstUseful(data.snapshot_scope_key),\n    rows,\n    matched_count: rows.filter((row) => row.status !== '待抓取').length,\n    success_count: successCount,\n    failed_count: failedCount,\n  };\n}\n\nfunction buildCompetitorRows(asins, snapshot) {\n  if (!Array.isArray(asins) || !asins.length) return [];\n  const byAsin = new Map((snapshot?.rows || []).map((row) => [normalizeAsin(row.asin), row]));\n  return asins.map((asin, index) => {\n    const normalized = normalizeAsin(asin) || asin;\n    const row = byAsin.get(normalized);\n    if (!row) return [String(index + 1), asin, '待抓取', '暂无数据', '暂无数据', '暂无数据', '暂无竞品快照'];\n    return [\n      String(index + 1),\n      normalized,\n      row.status,\n      row.price,\n      row.rating,\n      row.reviews,\n      row.title && row.title !== '暂无数据' ? shorten(row.title, 70) : row.note,\n    ];\n  });\n}\n\nfunction buildRiskFlags({ blocked, ratingNumber, reviewsNumber, priceNumber, riskText, manual, profitDetail, competitorSnapshot }) {\n  const flags = [];\n  if (blocked) flags.push({ severity: '高', label: '抓取受限', text: '页面疑似验证码或 Continue Shopping，本轮不能作为选品结论。' });\n  if (!priceNumber) flags.push({ severity: '中', label: '价格缺失', text: '价格缺失会影响利润和价格带判断。' });\n  if (!manual.landedCost && !manual.targetPrice) flags.push({ severity: '中', label: '成本缺失', text: '未提供采购/目标售价，利润结论只能保持中性。' });\n  if (manual.landedCost && !manual.fulfillmentFee) flags.push({ severity: '低', label: '履约费缺失', text: '未提供 FBA/履约费用，本轮按 0 处理，净利可能偏高。' });\n  if (manual.landedCost && !manual.adCostEstimate) flags.push({ severity: '低', label: '广告成本缺失', text: '未提供广告预算数值，本轮按 0 处理，需用测试投放校准。' });\n  if (profitDetail?.net_margin != null && profitDetail.net_margin < 0.15)\n    flags.push({ severity: '中', label: '净利偏薄', text: `当前估算净利率 ${(profitDetail.net_margin * 100).toFixed(1)}%，需要复核平台费、广告成本和供应链报价。` });\n  if (!manual.targetKeywords.length) flags.push({ severity: '中', label: '关键词缺失', text: '未提供目标关键词，无法判断搜索需求和 Listing 覆盖。' });\n  if (!manual.competitorAsins.length) flags.push({ severity: '低', label: '竞品集合缺失', text: '暂未形成同款/同类竞品对照。' });\n  if (manual.competitorAsins.length && !competitorSnapshot?.success_count)\n    flags.push({ severity: '低', label: '竞品快照缺失', text: '已记录竞品 ASIN，但尚未形成真实价格、评分、评论对比。' });\n  if (ratingNumber > 0 && ratingNumber < 4) flags.push({ severity: '高', label: '评分偏低', text: `当前评分 ${ratingNumber}，需优先查看差评主题。` });\n  if (reviewsNumber > 8000) flags.push({ severity: '中', label: '头部护城河', text: '评论数很高，说明需求存在，也意味着头部竞争强。' });\n  if (riskText !== '暂无数据') flags.push({ severity: '中', label: 'AI 风险提示', text: shorten(riskText, 130) });\n  return flags.slice(0, 6);\n}\n\nfunction buildNextActions({ blocked, manual, score, profitDetail, competitorSnapshot }) {\n  if (blocked) {\n    return [\n      { label: '重新抓取', text: '降低频率或换链接，确认不是验证码/Continue Shopping 页面。' },\n      { label: '人工复核', text: '手动打开商品页，确认标题、价格、评分和评论是否可见。' },\n    ];\n  }\n  const actions = [];\n  if (!manual.landedCost) actions.push({ label: '补成本', text: '填写 landed_cost 和 shipping_cost，重新计算利润空间。' });\n  if (manual.landedCost && !manual.fulfillmentFee) actions.push({ label: '补平台费用', text: '补充 fulfillment_fee 或后续接入 Product Fees API。' });\n  if (manual.landedCost && !manual.adCostEstimate) actions.push({ label: '补广告预算', text: '填写 ad_cost_estimate，用小预算投放校准真实获客成本。' });\n  if (!manual.targetKeywords.length) actions.push({ label: '补关键词', text: '填写 3-10 个目标关键词，后续用于 Listing 覆盖和需求判断。' });\n  if (!manual.competitorAsins.length) actions.push({ label: '补竞品', text: '填写 3-5 个竞品 ASIN，形成价格、评分、评论对照。' });\n  if (profitDetail?.net_margin != null && profitDetail.net_margin < 0.15)\n    actions.push({ label: '复核利润', text: '净利率偏薄，先压低采购/物流成本或提高目标售价，再考虑投放。' });\n  if (manual.competitorAsins.length && competitorSnapshot?.success_count)\n    actions.push({ label: '复核竞品价差', text: '已读取竞品快照，下一步对比价格、评分和评论护城河。' });\n  else if (manual.competitorAsins.length) actions.push({ label: '抓取竞品', text: '运行低频竞品快照，生成价格、评分、评论对比表。' });\n  actions.push(\n    score >= 80\n      ? { label: '小批量验证', text: '进入供应链报价、样品和小批量投放验证。' }\n      : score >= 65\n        ? { label: '下一轮评估', text: '补强利润、竞品和关键词证据后再判断是否推进。' }\n        : { label: '暂缓推进', text: '优先查找数据更完整或利润更清晰的候选品。' },\n  );\n  return actions.slice(0, 5);\n}\n\nfunction buildDataSources({ blocked, manual, competitorSnapshot }) {\n  const config = loadDataSourceConfig();\n  const configDetail = config.ok\n    ? `配置文件：${config.file}；最后检查：${config.last_checked_at}；备注：${config.owner_notes}`\n    : `未读取到配置文件：${config.file}；已使用内置默认状态。`;\n  return [\n    {\n      key: 'data_source_config',\n      label: '数据源配置',\n      status: config.ok ? '已读取' : '配置缺失',\n      detail: configDetail,\n      meta: {\n        file: config.file,\n        updated_at: config.updated_at,\n        last_checked_at: config.last_checked_at,\n        owner_notes: config.owner_notes,\n      },\n    },\n    configuredSource(config, 'crawlee', blocked ? '受限' : statusFromConfig(config.sources.crawlee.status), config.sources.crawlee.detail),\n    configuredSource(config, 'manual_inputs', manual.hasAny ? '部分提供' : '未提供', config.sources.manual_inputs.detail),\n    configuredSource(\n      config,\n      'competitor_snapshot',\n      competitorSnapshot?.status || '未生成',\n      competitorSnapshot?.detail || config.sources.competitor_snapshot.detail,\n    ),\n    configuredSource(config, 'keepa'),\n    configuredSource(config, 'sp_api'),\n    configuredSource(config, 'amazon_ads_api'),\n  ];\n}\n\nfunction dataSourceHtml(sources) {\n  return sources\n    .map(\n      (source) => `\n        <article class=\"source-card ${['已接入', '已读取', '已配置', '部分提供', '部分成功'].includes(source.status) ? 'on' : ['受限', '未完成', 'DryRun', '配置缺失', '未匹配'].includes(source.status) ? 'warn' : ''}\">\n          <strong>${htmlEscape(source.label)}</strong>\n          <span>${htmlEscape(source.status)}</span>\n          <p>${htmlEscape(source.detail)}</p>\n        </article>`,\n    )\n    .join('');\n}\n\nfunction metricCard(label, value, note = '') {\n  return `\n    <article class=\"metric\">\n      <div class=\"metric-label\">${htmlEscape(label)}</div>\n      <div class=\"metric-value\">${htmlEscape(value)}</div>\n      ${note ? `<div class=\"metric-note\">${htmlEscape(note)}</div>` : ''}\n    </article>`;\n}\n\nfunction pathForWindowsReport(filename) {\n  const base = windowsOutputDir.replace(/[\\\\/]+$/, '');\n  return `${base}\\\\reports\\\\${filename}`;\n}\n\nfunction ensureCsvHeader(file, csvHeaders) {\n  if (skipCsvAppend) return;\n  const headerLine = csvHeaders.map(csvEscape).join(',');\n  if (!fs.existsSync(file)) {\n    fs.writeFileSync(file, headerLine + '\\n', 'utf8');\n    return;\n  }\n  const current = fs.readFileSync(file, 'utf8');\n  const firstLineEnd = current.indexOf('\\n');\n  const firstLine = firstLineEnd >= 0 ? current.slice(0, firstLineEnd).replace(/\\r$/, '') : current.trim();\n  const missingHeader = csvHeaders.some((header) => !firstLine.includes(`\"${header}\"`));\n  if (missingHeader) {\n    const rest = firstLineEnd >= 0 ? current.slice(firstLineEnd + 1) : '';\n    fs.writeFileSync(file, headerLine + '\\n' + rest, 'utf8');\n  }\n}\n\nfunction parseCsvRows(text) {\n  const result = [];\n  let row = [];\n  let value = '';\n  let quoted = false;\n  for (let i = 0; i < text.length; i += 1) {\n    const char = text[i];\n    const next = text[i + 1];\n    if (quoted) {\n      if (char === '\"' && next === '\"') {\n        value += '\"';\n        i += 1;\n      } else if (char === '\"') {\n        quoted = false;\n      } else {\n        value += char;\n      }\n    } else if (char === '\"') {\n      quoted = true;\n    } else if (char === ',') {\n      row.push(value);\n      value = '';\n    } else if (char === '\\n') {\n      row.push(value);\n      if (row.some((cell) => cell !== '')) result.push(row);\n      row = [];\n      value = '';\n    } else if (char !== '\\r') {\n      value += char;\n    }\n  }\n  if (value || row.length) {\n    row.push(value);\n    if (row.some((cell) => cell !== '')) result.push(row);\n  }\n  return result;\n}\n\nfunction csvRecordsFromFile(file) {\n  if (!fs.existsSync(file)) return [];\n  const csvRows = parseCsvRows(fs.readFileSync(file, 'utf8'));\n  const [csvHeaders, ...records] = csvRows;\n  if (!csvHeaders?.length) return [];\n  return records.map((record) => Object.fromEntries(csvHeaders.map((header, index) => [header, record[index] || ''])));\n}\n\nfunction parseJsonSafe(value, fallback) {\n  const text = oneLine(value);\n  if (!text || text === '暂无数据') return fallback;\n  try {\n    return JSON.parse(text);\n  } catch (error) {\n    return fallback;\n  }\n}\n\nfunction reportRelativeLink(value) {\n  const text = oneLine(value);\n  const match = text.match(/reports[\\\\/]+([^\\\\/]+\\.html)$/i);\n  return match ? `reports/${match[1]}` : '';\n}\n\nfunction buildOverviewReport(records) {\n  const generatedAt = new Date().toISOString();\n  const overviewSourceConfig = loadDataSourceConfig();\n  const overviewSources = Object.keys(DEFAULT_DATA_SOURCE_CONFIG.sources)\n    .map((key) => configuredSource(overviewSourceConfig, key))\n    .sort((a, b) => (a.meta?.priority || 99) - (b.meta?.priority || 99));\n  const localSourceKeys = new Set(['crawlee', 'manual_inputs', 'competitor_snapshot']);\n  const reservedSourceKeys = new Set(['keepa', 'sp_api', 'amazon_ads_api']);\n  const offlineStatuses = new Set(['未接入', '配置缺失']);\n  const localUsableCount = overviewSources.filter((source) => localSourceKeys.has(source.key) && !offlineStatuses.has(source.status)).length;\n  const reservedOfflineCount = overviewSources.filter((source) => reservedSourceKeys.has(source.key) && offlineStatuses.has(source.status)).length;\n  const regressionOverviewSummaryFile = readJsonFile(outputDir + '/local_regression_overview.json');\n  const regressionSummaryFile = readJsonFile(outputDir + '/local_regression_latest.json');\n  const regressionMultiSummaryFile = readJsonFile(outputDir + '/local_regression_multi_viewport.json');\n  const regressionDesktopSummaryFile = readJsonFile(outputDir + '/local_regression_desktop.json');\n  const regressionArtifacts = [\n    { label: '回归总览 HTML', file: 'local_regression_overview.html' },\n    { label: '回归总览 JSON', file: 'local_regression_overview.json' },\n    { label: '回归报告 HTML', file: 'local_regression_latest.html' },\n    { label: '回归结果 JSON', file: 'local_regression_latest.json' },\n    { label: '多视口报告 HTML', file: 'local_regression_multi_viewport.html' },\n    { label: '多视口结果 JSON', file: 'local_regression_multi_viewport.json' },\n    { label: '桌面报告 HTML', file: 'local_regression_desktop.html' },\n    { label: '桌面结果 JSON', file: 'local_regression_desktop.json' },\n    { label: '总览移动截图', file: 'overview_mobile_layout_check.png' },\n    { label: '单品移动截图', file: 'latest_report_mobile_layout_check.png' },\n    { label: '总览桌面截图', file: 'overview_desktop_layout_check.png' },\n    { label: '单品桌面截图', file: 'latest_report_desktop_layout_check.png' },\n  ].map((artifact) => {\n    const filePath = outputDir + '/' + artifact.file;\n    try {\n      if (!fs.existsSync(filePath)) return { ...artifact, exists: false, updated_at: '暂无数据', bytes: 0 };\n      const stat = fs.statSync(filePath);\n      return { ...artifact, exists: true, updated_at: stat.mtime.toISOString(), bytes: stat.size };\n    } catch (error) {\n      return { ...artifact, exists: false, updated_at: '暂无数据', bytes: 0 };\n    }\n  });\n  const latestSnapshotFile = readJsonFile(competitorSnapshotFile);\n  const latestSnapshotAsinKey =\n    latestSnapshotFile.ok && Array.isArray(latestSnapshotFile.data?.results)\n      ? asinSetKey(latestSnapshotFile.data.results.map((row) => row.input_asin || row.asin))\n      : '';\n  const latestSnapshotSourceAsin = latestSnapshotFile.ok ? normalizeAsin(latestSnapshotFile.data?.source_asin) : '';\n  const latestSnapshotMarketplace = latestSnapshotFile.ok ? normalizeMarketplace(latestSnapshotFile.data?.marketplace) : '';\n  const latestSnapshotLogLink = latestSnapshotFile.ok\n    ? htmlFileRelativeLink(latestSnapshotFile.data?.html_path) || 'competitor_snapshot_latest.html'\n    : '';\n  const latestSnapshotHistoryLink = latestSnapshotFile.ok ? htmlFileRelativeLink(latestSnapshotFile.data?.history_html_path) : '';\n\n  function htmlFileRelativeLink(value) {\n    const text = oneLine(value);\n    const match = text.match(/([^\\\\/]+\\.html)$/i);\n    return match ? match[1] : '';\n  }\n\n  function asinSetKey(values) {\n    const asins = parseList(values)\n      .map(normalizeAsin)\n      .filter(Boolean)\n      .sort();\n    return asins.length ? [...new Set(asins)].join('|') : '';\n  }\n\n  function matchingLatestCompetitorSnapshot(asins, marketplace, sourceAsin) {\n    const wantedKey = asinSetKey(asins);\n    if (!wantedKey || !latestSnapshotAsinKey || wantedKey !== latestSnapshotAsinKey) return null;\n    const wantedSourceAsin = normalizeAsin(sourceAsin);\n    if (latestSnapshotSourceAsin && (!wantedSourceAsin || latestSnapshotSourceAsin !== wantedSourceAsin)) return null;\n    const wantedMarketplace = normalizeMarketplace(marketplace);\n    if (latestSnapshotMarketplace && wantedMarketplace && latestSnapshotMarketplace !== wantedMarketplace) return null;\n    const snapshot = loadCompetitorSnapshot(parseList(asins), marketplace, sourceAsin);\n    if (!snapshot?.rows?.length || snapshot.dry_run) return null;\n    return {\n      ...snapshot,\n      source: 'latest_competitor_snapshot_file',\n      source_match: !latestSnapshotSourceAsin || latestSnapshotSourceAsin === wantedSourceAsin,\n    };\n  }\n\n  const normalized = records\n    .map((record) => {\n      const risks = parseJsonSafe(record.risk_flags_json, []);\n      const actions = parseJsonSafe(record.next_actions_json, []);\n      const evidence = parseJsonSafe(record.evidence_json, {});\n      const productAsin = firstUseful(record.asin);\n      const evidenceManualInputs = evidence?.manual_inputs && typeof evidence.manual_inputs === 'object' ? evidence.manual_inputs : {};\n      const competitorAsins = parseList(record.competitor_asins).length\n        ? parseList(record.competitor_asins)\n        : parseList(evidenceManualInputs.competitor_asins);\n      const marketplace = firstUseful(record.marketplace, evidenceManualInputs.marketplace);\n      const csvCompetitorSnapshot = evidence?.competitor_snapshot && typeof evidence.competitor_snapshot === 'object' ? evidence.competitor_snapshot : {};\n      const latestCompetitorSnapshot = matchingLatestCompetitorSnapshot(competitorAsins, marketplace, productAsin);\n      const competitorSnapshot = latestCompetitorSnapshot || csvCompetitorSnapshot;\n      const competitorSnapshotRows = Array.isArray(competitorSnapshot.rows) ? competitorSnapshot.rows : [];\n      const competitorTotal = competitorSnapshotRows.length;\n      const competitorSuccess =\n        typeof competitorSnapshot.success_count === 'number'\n          ? competitorSnapshot.success_count\n          : competitorSnapshotRows.filter((row) => row.status === '已抓取' || row.status === 'success' || row.ok === true).length;\n      const competitorCoverage = competitorTotal > 0 ? competitorSuccess / competitorTotal : null;\n      const competitorStatus =\n        competitorTotal > 0\n          ? `${competitorSuccess}/${competitorTotal} ${firstUseful(competitorSnapshot.status)}`\n          : firstUseful(competitorSnapshot.status, '未接入');\n      const competitorUpdatedAt = firstUseful(competitorSnapshot.updated_at);\n      const score = toNumber(record.recommendation_score);\n      return {\n        createdAt: firstUseful(record.created_at),\n        time: Date.parse(record.created_at) || 0,\n        asin: productAsin,\n        title: firstUseful(record.product_title),\n        price: firstUseful(record.price),\n        rating: firstUseful(record.rating),\n        reviews: firstUseful(record.reviews),\n        score,\n        decision: firstUseful(record.decision),\n        risks: Array.isArray(risks) ? risks : [],\n        actions: Array.isArray(actions) ? actions : [],\n        margin: typeof evidence?.profit_estimate?.net_margin === 'number' ? evidence.profit_estimate.net_margin : null,\n        competitorStatus,\n        competitorSuccess,\n        competitorTotal,\n        competitorCoverage,\n        competitorUpdatedAt,\n        competitorUpdatedTime: Date.parse(competitorUpdatedAt) || 0,\n        competitorNeedsVerification: competitorTotal === 0 || competitorSuccess < competitorTotal,\n        reportLink: reportRelativeLink(record.html_report),\n      };\n    })\n    .filter((record) => record.title !== '暂无数据' || record.asin !== '暂无数据');\n\n  const scored = normalized.filter((record) => record.score > 0);\n  const avgScore = scored.length ? Math.round(scored.reduce((sum, record) => sum + record.score, 0) / scored.length) : 0;\n  const ready = scored.filter((record) => record.score >= 80).length;\n  const review = scored.filter((record) => record.score >= 65 && record.score < 80).length;\n  const hold = scored.filter((record) => record.score > 0 && record.score < 65).length;\n  const sortedByScore = [...normalized].sort((a, b) => b.score - a.score || b.time - a.time).slice(0, 12);\n  const sortedByTime = [...normalized].sort((a, b) => b.time - a.time).slice(0, 10);\n  const latestByAsin = new Map();\n  for (const record of [...normalized].sort((a, b) => b.time - a.time)) {\n    const key = record.asin !== '暂无数据' ? record.asin : `${record.title}|${record.reportLink}`;\n    if (!latestByAsin.has(key)) latestByAsin.set(key, record);\n  }\n  const deduped = [...latestByAsin.values()].sort((a, b) => b.score - a.score || b.time - a.time).slice(0, 12);\n  const competitorVerified = deduped.filter((record) => record.competitorSuccess > 0).length;\n  const competitorPending = deduped.filter((record) => record.competitorNeedsVerification).length;\n  const competitorCoverageRows = deduped.filter((record) => record.competitorCoverage != null);\n  const avgCompetitorCoverage = competitorCoverageRows.length\n    ? Math.round((competitorCoverageRows.reduce((sum, record) => sum + record.competitorCoverage, 0) / competitorCoverageRows.length) * 100)\n    : 0;\n  const verificationSorted = [...deduped].sort((a, b) => b.competitorUpdatedTime - a.competitorUpdatedTime || b.time - a.time).slice(0, 12);\n  const unverifiedCandidates = deduped\n    .filter((record) => record.competitorNeedsVerification)\n    .sort((a, b) => b.score - a.score || b.time - a.time)\n    .slice(0, 12);\n  const riskMap = new Map();\n  for (const record of normalized) {\n    for (const risk of record.risks) {\n      const label = firstUseful(risk.label, risk.severity);\n      if (label === '暂无数据') continue;\n      riskMap.set(label, (riskMap.get(label) || 0) + 1);\n    }\n  }\n  const riskRows = [...riskMap.entries()]\n    .sort((a, b) => b[1] - a[1])\n    .slice(0, 8)\n    .map(([label, count]) => [label, String(count)]);\n  const competitorStatusRows = deduped.slice(0, 8).map((record) => [\n    record.asin,\n    shorten(record.title, 36),\n    record.competitorCoverage == null ? '暂无' : `${Math.round(record.competitorCoverage * 100)}%`,\n    record.competitorStatus,\n    record.competitorUpdatedAt,\n  ]);\n\n  const candidateRows = sortedByScore.map((record) => [\n    record.score ? String(record.score) : '暂无',\n    record.decision,\n    record.asin,\n    shorten(record.title, 54),\n    record.margin == null ? '暂无' : `${(record.margin * 100).toFixed(1)}%`,\n    record.competitorCoverage == null ? '暂无' : `${Math.round(record.competitorCoverage * 100)}%`,\n    record.risks.map((risk) => risk.label).filter(Boolean).slice(0, 2).join(' / ') || '暂无',\n    record.reportLink ? `<a href=\"${htmlEscape(record.reportLink)}\">打开</a>` : '暂无',\n  ]);\n  const dedupRows = deduped.map((record) => [\n    record.score ? String(record.score) : '暂无',\n    record.decision,\n    record.asin,\n    shorten(record.title, 60),\n    record.margin == null ? '暂无' : `${(record.margin * 100).toFixed(1)}%`,\n    record.competitorCoverage == null ? '暂无' : `${Math.round(record.competitorCoverage * 100)}%`,\n    record.actions.map((action) => action.label).filter(Boolean).slice(0, 2).join(' / ') || '暂无',\n    record.createdAt,\n    record.reportLink ? `<a href=\"${htmlEscape(record.reportLink)}\">打开</a>` : '暂无',\n  ]);\n  const latestRows = sortedByTime.map((record) => [\n    record.createdAt,\n    record.score ? String(record.score) : '暂无',\n    record.asin,\n    shorten(record.title, 60),\n    record.competitorStatus,\n    record.actions.map((action) => action.label).filter(Boolean).slice(0, 2).join(' / ') || '暂无',\n  ]);\n  const verificationRows = verificationSorted.map((record) => [\n    record.competitorUpdatedAt,\n    record.competitorCoverage == null ? '暂无' : `${Math.round(record.competitorCoverage * 100)}%`,\n    record.competitorStatus,\n    record.score ? String(record.score) : '暂无',\n    record.asin,\n    shorten(record.title, 54),\n    record.actions.map((action) => action.label).filter(Boolean).slice(0, 2).join(' / ') || '暂无',\n    record.reportLink ? `<a href=\"${htmlEscape(record.reportLink)}\">打开</a>` : '暂无',\n  ]);\n  const unverifiedRows = unverifiedCandidates.map((record) => [\n    record.score ? String(record.score) : '暂无',\n    record.asin,\n    shorten(record.title, 54),\n    record.competitorCoverage == null ? '暂无' : `${Math.round(record.competitorCoverage * 100)}%`,\n    record.competitorStatus,\n    record.actions.map((action) => action.label).filter(Boolean).slice(0, 2).join(' / ') || '暂无',\n    record.reportLink ? `<a href=\"${htmlEscape(record.reportLink)}\">打开</a>` : '暂无',\n  ]);\n\n  function rawTable(headersForTable, rowsForTable) {\n    if (!rowsForTable.length) return '<p class=\"muted desktop-table\">暂无数据</p>';\n    return `\n      <div class=\"table-wrap desktop-table\">\n        <table>\n          <thead><tr>${headersForTable.map((header) => `<th>${htmlEscape(header)}</th>`).join('')}</tr></thead>\n          <tbody>\n            ${rowsForTable\n              .map((row) => `<tr>${row.map((cell) => `<td>${String(cell).startsWith('<a ') ? cell : htmlEscape(cell)}</td>`).join('')}</tr>`)\n              .join('')}\n          </tbody>\n        </table>\n      </div>`;\n  }\n\n  function actionSummary(record) {\n    return record.actions.map((action) => action.label).filter(Boolean).slice(0, 2).join(' / ') || '暂无';\n  }\n\n  function riskSummary(record) {\n    return record.risks.map((risk) => risk.label).filter(Boolean).slice(0, 2).join(' / ') || '暂无';\n  }\n\n  function coverageText(record) {\n    return record.competitorCoverage == null ? '暂无' : `${Math.round(record.competitorCoverage * 100)}%`;\n  }\n\n  function marginText(record) {\n    return record.margin == null ? '暂无' : `${(record.margin * 100).toFixed(1)}%`;\n  }\n\n  function cardLink(record) {\n    return record.reportLink ? `<a href=\"${htmlEscape(record.reportLink)}\">打开报告</a>` : '<span class=\"muted\">暂无报告</span>';\n  }\n\n  function snapshotLogLinks() {\n    if (!latestSnapshotLogLink) return '';\n    return `\n      <div class=\"log-links\">\n        <a href=\"${htmlEscape(latestSnapshotLogLink)}\">打开竞品快照日志</a>\n        ${latestSnapshotHistoryLink ? `<a href=\"${htmlEscape(latestSnapshotHistoryLink)}\">打开本轮历史日志</a>` : ''}\n      </div>`;\n  }\n\n  function overviewSourceClass(status) {\n    if (['已接入', '已读取', '已配置', '可选', '部分提供', '部分成功'].includes(status)) return 'on';\n    if (['受限', '未完成', 'DryRun', '配置缺失', '未匹配'].includes(status)) return 'warn';\n    return 'off';\n  }\n\n  function overviewSourceHealthHtml() {\n    const configLine = overviewSourceConfig.ok\n      ? `配置更新 ${shorten(overviewSourceConfig.updated_at, 24)}；最近检查 ${shorten(overviewSourceConfig.last_checked_at, 24)}`\n      : `配置读取失败：${shorten(firstUseful(overviewSourceConfig.reason), 40)}`;\n    return `\n      <section class=\"source-health\" aria-label=\"数据源健康摘要\">\n        <div class=\"source-health-head\">\n          <div>\n            <strong>数据源健康</strong>\n            <span>本地可用 ${localUsableCount}/3 · 高级预留未接入 ${reservedOfflineCount}/3</span>\n          </div>\n          <em class=\"${overviewSourceConfig.ok ? 'ok' : 'warn'}\">${overviewSourceConfig.ok ? '配置正常' : '需检查配置'}</em>\n        </div>\n        <div class=\"source-chip-list\">\n          ${overviewSources\n            .map(\n              (source) => `\n                <span class=\"source-chip ${overviewSourceClass(source.status)}\" title=\"${htmlEscape(source.detail)}\">\n                  <strong>${htmlEscape(shorten(source.label, 24))}</strong>\n                  <small>${htmlEscape(source.status)}</small>\n                </span>`,\n            )\n            .join('')}\n        </div>\n        <p class=\"source-health-note\">${htmlEscape(configLine)}。未接入的高级数据源不参与评分，当前结论按本地抓取、手工字段和竞品快照生成。</p>\n      </section>`;\n  }\n\n  function localRegressionHtml() {\n    const summary =\n      regressionSummaryFile.ok && regressionSummaryFile.data && typeof regressionSummaryFile.data === 'object'\n        ? regressionSummaryFile.data\n        : null;\n    const multiSummary =\n      regressionMultiSummaryFile.ok && regressionMultiSummaryFile.data && typeof regressionMultiSummaryFile.data === 'object'\n        ? regressionMultiSummaryFile.data\n        : null;\n    const desktopSummary =\n      regressionDesktopSummaryFile.ok && regressionDesktopSummaryFile.data && typeof regressionDesktopSummaryFile.data === 'object'\n        ? regressionDesktopSummaryFile.data\n        : null;\n    const overviewSummary =\n      regressionOverviewSummaryFile.ok && regressionOverviewSummaryFile.data && typeof regressionOverviewSummaryFile.data === 'object'\n        ? regressionOverviewSummaryFile.data\n        : null;\n    const counts = summary?.counts && typeof summary.counts === 'object' ? summary.counts : {};\n    const statusText = summary ? (summary.ok ? 'OK' : 'FAILED') : '未生成';\n    const statusClass = summary?.ok ? 'ok' : summary ? 'warn' : 'muted';\n    const multiStatusText = multiSummary ? (multiSummary.ok ? 'OK' : 'FAILED') : '未生成';\n    const multiStatusClass = multiSummary?.ok ? 'ok' : multiSummary ? 'warn' : 'muted';\n    const desktopStatusText = desktopSummary ? (desktopSummary.ok ? 'OK' : 'FAILED') : '未生成';\n    const desktopStatusClass = desktopSummary?.ok ? 'ok' : desktopSummary ? 'warn' : 'muted';\n    const generated = firstUseful(summary?.generated_at, regressionSummaryFile.mtime);\n    const multiGenerated = firstUseful(multiSummary?.generated_at, regressionMultiSummaryFile.mtime);\n    const desktopGenerated = firstUseful(desktopSummary?.generated_at, regressionDesktopSummaryFile.mtime);\n    const viewportText = (item) =>\n      Array.isArray(item?.mobile_viewports) && item.mobile_viewports.length\n        ? item.mobile_viewports.map((width) => `${width}px`).join(' / ')\n        : '暂无数据';\n    const desktopText =\n      desktopSummary?.desktop_check && desktopSummary.desktop_width\n        ? `${desktopSummary.desktop_width}px`\n        : '暂无数据';\n    const cacheStep = Array.isArray(summary?.steps) ? summary.steps.find((step) => step.id === 'adapter_cache') : null;\n    const cacheStrict = summary?.strict_cache === true;\n    const cacheReason = shorten(firstUseful(cacheStep?.reason, cacheStep?.stderr, cacheStep?.stdout), 150);\n    const cacheStatus = (() => {\n      if (!cacheStep) return { text: '未检查', className: 'muted' };\n      if (cacheStep.skipped) return { text: '未生成', className: 'muted' };\n      if (cacheStep.ok) return { text: cacheStrict ? '严格通过' : '检查通过', className: 'ok' };\n      return { text: cacheStrict ? '严格失败' : '失败', className: 'warn' };\n    })();\n    const cacheGuidance = (() => {\n      if (!cacheStep) return '尚未执行 cache 检查。';\n      if (cacheStep.skipped) return '默认回归会跳过空 cache，不影响当前免费本地流程；接入 Keepa、SP-API 或 Ads cache 后再启用严格检查。';\n      if (cacheStep.ok) return cacheStrict ? '严格 cache 已通过，可作为高级数据源回归门禁。' : 'cache 结构和敏感信息扫描通过。';\n      if (cacheStrict && /No JSON cache files found/i.test(cacheReason)) {\n        return 'strict-cache 已开启，但 cache 目录没有 JSON；先生成高级数据源 cache，或在免费流程中关闭 strict-cache。';\n      }\n      if (cacheStrict) return 'strict-cache 失败，优先检查 cache 是否 stale、expired，或缺少 fetched_at / ttl_hours。';\n      return 'cache 检查失败，先查看回归 HTML 或 JSON 明细。';\n    })();\n    const freshness = (item, file) => {\n      if (!item) return { text: '未生成', className: 'muted' };\n      const timestampText = firstUseful(item.generated_at, file.mtime);\n      const timestamp = Date.parse(timestampText);\n      if (!Number.isFinite(timestamp)) return { text: '时间异常', className: 'warn' };\n      const ageHours = (Date.now() - timestamp) / 36e5;\n      if (ageHours > 24) return { text: '需重跑', className: 'warn' };\n      return { text: '新鲜', className: 'ok' };\n    };\n    const defaultFreshness = freshness(summary, regressionSummaryFile);\n    const multiFreshness = freshness(multiSummary, regressionMultiSummaryFile);\n    const desktopFreshness = freshness(desktopSummary, regressionDesktopSummaryFile);\n    const overviewFreshnessRaw = overviewSummary?.freshness && typeof overviewSummary.freshness === 'object' ? overviewSummary.freshness : null;\n    const overviewFreshnessClass = ['ok', 'warn', 'muted'].includes(overviewFreshnessRaw?.status_class)\n      ? overviewFreshnessRaw.status_class\n      : overviewSummary\n        ? 'ok'\n        : 'muted';\n    const overviewFreshnessText = firstUseful(overviewFreshnessRaw?.status, overviewSummary ? '新鲜' : '未生成');\n    const overviewGenerated = firstUseful(overviewFreshnessRaw?.last_refreshed_at, overviewSummary?.generated_at, regressionOverviewSummaryFile.mtime);\n    const overviewFreshUntil = firstUseful(overviewFreshnessRaw?.fresh_until);\n    const overviewFreshnessMessage = firstUseful(overviewFreshnessRaw?.message, overviewSummary ? '统一回归总览已生成。' : '统一回归总览未生成。');\n    const passed = typeof counts.passed === 'number' ? counts.passed : 0;\n    const skipped = typeof counts.skipped === 'number' ? counts.skipped : 0;\n    const failed = typeof counts.failed === 'number' ? counts.failed : 0;\n    const primaryRegressionArtifacts = regressionArtifacts.filter((artifact) => artifact.label.startsWith('回归总览'));\n    const detailRegressionArtifacts = regressionArtifacts.filter((artifact) => !artifact.label.startsWith('回归总览'));\n    const detailGeneratedCount = detailRegressionArtifacts.filter((artifact) => artifact.exists).length;\n    const artifactLinks = (artifacts) =>\n      artifacts\n        .map((artifact) =>\n          artifact.exists\n            ? `<a href=\"${htmlEscape(artifact.file)}\">${htmlEscape(artifact.label)}</a>`\n            : `<span>${htmlEscape(artifact.label)}未生成</span>`,\n        )\n        .join('');\n    return `\n      <section class=\"panel check-summary\" aria-label=\"本地回归检查\">\n        <div class=\"check-head\">\n          <div>\n            <h2>本地回归检查</h2>\n            <p>统一总览：${htmlEscape(overviewGenerated)}。先看回归总览，再决定是否重新同步或执行 workflow。</p>\n          </div>\n          <strong class=\"${statusClass}\">${htmlEscape(statusText)}</strong>\n        </div>\n        <div class=\"check-stats\">\n          <span>总览新鲜度 <b class=\"${overviewFreshnessClass}\">${htmlEscape(overviewFreshnessText)}</b></span>\n          <span>最早过期 <b>${htmlEscape(overviewFreshUntil)}</b></span>\n          <span>通过 <b>${htmlEscape(passed)}</b></span>\n          <span>跳过 <b>${htmlEscape(skipped)}</b></span>\n          <span>失败 <b>${htmlEscape(failed)}</b></span>\n          <span>默认宽度 <b>${htmlEscape(viewportText(summary))}</b></span>\n          <span>默认新鲜度 <b class=\"${defaultFreshness.className}\">${htmlEscape(defaultFreshness.text)}</b></span>\n        </div>\n        <div class=\"check-stats check-stats-secondary\">\n          <span>多视口 <b>${htmlEscape(viewportText(multiSummary))}</b></span>\n          <span>多视口状态 <b class=\"${multiStatusClass}\">${htmlEscape(multiStatusText)}</b></span>\n          <span>多视口新鲜度 <b class=\"${multiFreshness.className}\">${htmlEscape(multiFreshness.text)}</b></span>\n          <span>多视口检查 <b>${htmlEscape(multiGenerated)}</b></span>\n        </div>\n        <div class=\"check-stats check-stats-secondary\">\n          <span>桌面宽度 <b>${htmlEscape(desktopText)}</b></span>\n          <span>桌面状态 <b class=\"${desktopStatusClass}\">${htmlEscape(desktopStatusText)}</b></span>\n          <span>桌面新鲜度 <b class=\"${desktopFreshness.className}\">${htmlEscape(desktopFreshness.text)}</b></span>\n          <span>桌面检查 <b>${htmlEscape(desktopGenerated)}</b></span>\n        </div>\n        <p class=\"check-note\">\n          <strong>Cache 状态</strong>\n          <b class=\"${cacheStatus.className}\">${htmlEscape(cacheStatus.text)}</b>\n          <span>${htmlEscape(cacheGuidance)}${cacheReason !== '暂无数据' ? ` 原因：${htmlEscape(cacheReason)}` : ''}</span>\n        </p>\n        <p class=\"check-note\">\n          <strong>总览提示</strong>\n          <b class=\"${overviewFreshnessClass}\">${htmlEscape(overviewFreshnessText)}</b>\n          <span>${htmlEscape(overviewFreshnessMessage)}</span>\n        </p>\n        <div class=\"check-links check-links-primary\">\n          ${artifactLinks(primaryRegressionArtifacts)}\n        </div>\n        <details class=\"check-details\">\n          <summary>高级明细：单次回归、多视口、桌面和截图（已生成 ${htmlEscape(detailGeneratedCount)}/${htmlEscape(detailRegressionArtifacts.length)}）</summary>\n          <div class=\"check-links check-links-detail\">\n            ${artifactLinks(detailRegressionArtifacts)}\n          </div>\n        </details>\n      </section>`;\n  }\n\n  function verificationTimeText(record) {\n    return record.competitorUpdatedAt === '暂无数据' ? '未验证' : shorten(record.competitorUpdatedAt, 24);\n  }\n\n  function overviewCardList(recordsForCards, mode = 'action') {\n    if (!recordsForCards.length) return '<div class=\"mobile-card-list\"><p class=\"muted\">暂无数据</p></div>';\n    return `\n      <div class=\"mobile-card-list\">\n        ${recordsForCards\n          .map((record) => {\n            const detailLabel = mode === 'risk' ? '主要风险' : '下一步';\n            const detailText = mode === 'risk' ? riskSummary(record) : actionSummary(record);\n            return `\n              <article class=\"overview-card\">\n                <div class=\"card-head\">\n                  <span class=\"score-pill\">${htmlEscape(record.score ? String(record.score) : '暂无')}</span>\n                  <strong>${htmlEscape(shorten(record.decision, 22))}</strong>\n                </div>\n                <div class=\"card-title\">${htmlEscape(shorten(record.title, 56))}</div>\n                <div class=\"card-meta\">\n                  <span>ASIN<br><strong>${htmlEscape(record.asin)}</strong></span>\n                  <span>净利<br><strong>${htmlEscape(marginText(record))}</strong></span>\n                  <span>竞品<br><strong>${htmlEscape(coverageText(record))}</strong></span>\n                </div>\n                <div class=\"card-line\"><span>${htmlEscape(detailLabel)}</span><strong>${htmlEscape(shorten(detailText, 34))}</strong></div>\n                <div class=\"card-foot\"><span>${htmlEscape(shorten(record.createdAt, 24))}</span>${cardLink(record)}</div>\n              </article>`;\n          })\n          .join('')}\n      </div>`;\n  }\n\n  function latestCardList(recordsForCards) {\n    if (!recordsForCards.length) return '<div class=\"mobile-card-list\"><p class=\"muted\">暂无数据</p></div>';\n    return `\n      <div class=\"mobile-card-list\">\n        ${recordsForCards\n          .map(\n            (record) => `\n              <article class=\"overview-card\">\n                <div class=\"card-head\">\n                  <span class=\"score-pill\">${htmlEscape(record.score ? String(record.score) : '暂无')}</span>\n                  <strong>${htmlEscape(shorten(record.asin, 18))}</strong>\n                </div>\n                <div class=\"card-title\">${htmlEscape(shorten(record.title, 56))}</div>\n                <div class=\"card-line\"><span>竞品快照</span><strong>${htmlEscape(shorten(record.competitorStatus, 34))}</strong></div>\n                <div class=\"card-line\"><span>下一步</span><strong>${htmlEscape(shorten(actionSummary(record), 34))}</strong></div>\n                <div class=\"card-foot\"><span>${htmlEscape(shorten(record.createdAt, 24))}</span>${cardLink(record)}</div>\n              </article>`,\n          )\n          .join('')}\n      </div>`;\n  }\n\n  function competitorCardList(recordsForCards) {\n    if (!recordsForCards.length) return '<div class=\"mobile-card-list\"><p class=\"muted\">暂无数据</p></div>';\n    return `\n      <div class=\"mobile-card-list\">\n        ${recordsForCards\n          .map(\n            (record) => `\n              <article class=\"overview-card compact-card\">\n                <div class=\"card-head\">\n                  <span class=\"score-pill\">${htmlEscape(coverageText(record))}</span>\n                  <strong>${htmlEscape(record.asin)}</strong>\n                </div>\n                <div class=\"card-title\">${htmlEscape(shorten(record.title, 46))}</div>\n                <div class=\"card-line\"><span>状态</span><strong>${htmlEscape(shorten(record.competitorStatus, 34))}</strong></div>\n                <div class=\"card-foot\"><span>${htmlEscape(shorten(record.competitorUpdatedAt, 24))}</span>${cardLink(record)}</div>\n              </article>`,\n          )\n          .join('')}\n      </div>`;\n  }\n\n  function riskCardList(rowsForCards) {\n    if (!rowsForCards.length) return '<div class=\"mobile-card-list\"><p class=\"muted\">暂无数据</p></div>';\n    return `\n      <div class=\"mobile-card-list\">\n        ${rowsForCards\n          .map(\n            ([label, count]) => `\n              <article class=\"overview-card compact-card\">\n                <div class=\"card-head\">\n                  <span class=\"score-pill\">${htmlEscape(count)}</span>\n                  <strong>${htmlEscape(shorten(label, 30))}</strong>\n                </div>\n              </article>`,\n          )\n          .join('')}\n      </div>`;\n  }\n\n  function verificationCardList(recordsForCards) {\n    if (!recordsForCards.length) return '<div class=\"mobile-card-list\"><p class=\"muted\">暂无数据</p></div>';\n    return `\n      <div class=\"mobile-card-list\">\n        ${recordsForCards\n          .map(\n            (record) => `\n              <article class=\"overview-card\">\n                <div class=\"card-head\">\n                  <span class=\"score-pill\">${htmlEscape(record.score ? String(record.score) : '暂无')}</span>\n                  <strong>${htmlEscape(shorten(record.decision, 22))}</strong>\n                </div>\n                <div class=\"card-title\">${htmlEscape(shorten(record.title, 56))}</div>\n                <div class=\"card-meta\">\n                  <span>ASIN<br><strong>${htmlEscape(record.asin)}</strong></span>\n                  <span>竞品<br><strong>${htmlEscape(coverageText(record))}</strong></span>\n                  <span>验证<br><strong>${htmlEscape(verificationTimeText(record))}</strong></span>\n                </div>\n                <div class=\"card-line\"><span>状态</span><strong>${htmlEscape(shorten(record.competitorStatus, 34))}</strong></div>\n                <div class=\"card-line\"><span>下一步</span><strong>${htmlEscape(shorten(actionSummary(record), 34))}</strong></div>\n                <div class=\"card-foot\"><span>${htmlEscape(shorten(record.createdAt, 24))}</span>${cardLink(record)}</div>\n              </article>`,\n          )\n          .join('')}\n      </div>`;\n  }\n\n  return `<!doctype html>\n<html lang=\"zh-CN\">\n<head>\n  <meta charset=\"utf-8\">\n  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n  <title>AI 选品批量总览看板</title>\n  <style>\n    * { box-sizing: border-box; }\n    html, body { max-width: 100%; overflow-x: hidden; }\n    body { margin: 0; background: #f4f7fb; color: #17202c; font-family: \"Microsoft YaHei\", \"PingFang SC\", Arial, sans-serif; line-height: 1.55; }\n    .page { width: min(1180px, calc(100% - 32px)); margin: 0 auto; padding: 24px 0 40px; }\n    .hero, .panel, .metric { min-width: 0; background: #fff; border: 1px solid #dce3ee; border-radius: 8px; box-shadow: 0 14px 30px rgba(20, 32, 44, 0.07); }\n    .hero { padding: 22px; margin-bottom: 14px; }\n    .kicker { color: #0f766e; font-size: 13px; font-weight: 900; margin-bottom: 8px; }\n    h1 { margin: 0 0 10px; font-size: 28px; line-height: 1.25; letter-spacing: 0; }\n    h2 { margin: 0 0 12px; font-size: 18px; }\n    p { margin: 0; color: #536173; max-width: 100%; overflow-wrap: anywhere; word-break: break-word; }\n    .overview-boundary { margin-top: 10px; border-left: 3px solid #0f766e; background: #f0fdfa; color: #31584f; padding: 9px 11px; border-radius: 6px; font-size: 13px; line-height: 1.55; }\n    .source-health { margin-top: 12px; border: 1px solid #dce3ee; border-radius: 8px; background: #f8fafc; padding: 12px; }\n    .source-health-head { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }\n    .source-health-head strong { display: block; font-size: 15px; color: #17202c; }\n    .source-health-head span { display: block; color: #64748b; font-size: 12px; margin-top: 3px; }\n    .source-health-head em { flex: 0 0 auto; border-radius: 999px; padding: 4px 9px; font-size: 12px; font-style: normal; font-weight: 900; }\n    .source-health-head em.ok { background: #dcfce7; color: #166534; }\n    .source-health-head em.warn { background: #ffedd5; color: #9a3412; }\n    .source-chip-list { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }\n    .source-chip { min-width: 0; display: inline-flex; align-items: center; gap: 6px; max-width: 100%; border: 1px solid #dce3ee; border-radius: 999px; background: #fff; padding: 6px 9px; }\n    .source-chip strong { min-width: 0; color: #17202c; font-size: 12px; overflow-wrap: anywhere; word-break: break-word; }\n    .source-chip small { flex: 0 0 auto; font-size: 11px; font-weight: 900; color: #64748b; }\n    .source-chip.on { background: #ecfdf5; border-color: #bbf7d0; }\n    .source-chip.on small { color: #047857; }\n    .source-chip.warn { background: #fff7ed; border-color: #fed7aa; }\n    .source-chip.warn small { color: #c2410c; }\n    .source-chip.off { background: #f8fafc; border-color: #dce3ee; }\n    .source-health-note { margin-top: 9px; color: #64748b; font-size: 12px; line-height: 1.55; }\n    .check-summary { margin-bottom: 14px; }\n    .check-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }\n    .check-head h2 { margin-bottom: 4px; }\n    .check-head strong { flex: 0 0 auto; border-radius: 999px; padding: 5px 10px; font-size: 12px; }\n    .check-head strong.ok { background: #dcfce7; color: #166534; }\n    .check-head strong.warn { background: #ffedd5; color: #9a3412; }\n    .check-head strong.muted { background: #eef2f7; color: #64748b; }\n    .check-stats { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }\n    .check-stats span { border: 1px solid #dce3ee; border-radius: 999px; background: #f8fafc; color: #64748b; font-size: 12px; padding: 6px 10px; }\n    .check-stats b { color: #17202c; }\n    .check-stats-secondary { margin-top: 8px; }\n    .check-stats b.ok { color: #047857; }\n    .check-stats b.warn { color: #9a3412; }\n    .check-stats b.muted { color: #64748b; }\n    .check-note { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin: 10px 0 0; color: #475569; font-size: 13px; }\n    .check-note strong { color: #17202c; }\n    .check-note b { border-radius: 999px; padding: 4px 8px; background: #f1f5f9; }\n    .check-note b.ok { background: #dcfce7; color: #047857; }\n    .check-note b.warn { background: #ffedd5; color: #9a3412; }\n    .check-note b.muted { background: #eef2f7; color: #64748b; }\n    .check-links { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }\n    .check-links a, .check-links span { border: 1px solid #bfdbfe; border-radius: 999px; background: #eff6ff; padding: 7px 12px; font-size: 13px; font-weight: 800; }\n    .check-links span { border-color: #dce3ee; background: #f8fafc; color: #64748b; }\n    .check-links-primary a:first-child { background: #0f766e; border-color: #0f766e; color: #fff; }\n    .check-links-primary a:nth-child(2) { background: #f0fdfa; border-color: #99f6e4; color: #0f766e; }\n    .check-details { margin-top: 10px; border: 1px solid #dce3ee; border-radius: 8px; background: #f8fafc; }\n    .check-details summary { cursor: pointer; padding: 10px 12px; color: #17202c; font-size: 13px; font-weight: 900; list-style: none; }\n    .check-details summary::-webkit-details-marker { display: none; }\n    .check-details summary::after { content: '展开'; float: right; color: #0f766e; font-size: 12px; }\n    .check-details[open] summary::after { content: '收起'; }\n    .check-details:not([open]) .check-links-detail { display: none; }\n    .check-links-detail { margin: 0; padding: 0 12px 12px; }\n    .metrics { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 12px; margin-bottom: 14px; }\n    .metric { padding: 15px; min-height: 92px; }\n    .metric span { color: #64748b; font-size: 13px; display: block; margin-bottom: 7px; }\n    .metric strong { font-size: 24px; }\n    .grid { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(0, 0.65fr); gap: 14px; }\n    .grid > * { min-width: 0; }\n    .panel { padding: 18px; margin-bottom: 14px; }\n    .table-wrap { width: 100%; max-width: 100%; overflow-x: auto; border: 1px solid #dce3ee; border-radius: 8px; background: #fff; }\n    table { width: 100%; border-collapse: collapse; min-width: 720px; font-size: 13px; }\n    th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid #dce3ee; vertical-align: top; }\n    th { color: #64748b; background: #f8fafc; font-weight: 900; }\n    tr:last-child td { border-bottom: 0; }\n    a { color: #2563eb; text-decoration: none; font-weight: 800; }\n    .muted { color: #64748b; }\n    .footer { color: #64748b; font-size: 12px; margin-top: 10px; }\n    .log-links { display: flex; flex-wrap: wrap; gap: 8px; margin: 10px 0 12px; }\n    .log-links a { border: 1px solid #bfdbfe; border-radius: 999px; background: #eff6ff; padding: 7px 12px; font-size: 13px; }\n    .segmented { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }\n    .view-button { border: 1px solid #dce3ee; border-radius: 999px; background: #fff; color: #334155; cursor: pointer; font: inherit; font-size: 13px; font-weight: 900; padding: 7px 12px; }\n    .view-button.is-active { background: #0f766e; border-color: #0f766e; color: #fff; }\n    .view-panel[hidden] { display: none !important; }\n    .mobile-card-list { display: none; }\n    .overview-card { min-width: 0; border: 1px solid #dce3ee; border-radius: 8px; background: #fff; padding: 12px; box-shadow: 0 8px 20px rgba(20, 32, 44, 0.05); }\n    .card-head { display: flex; align-items: center; gap: 8px; min-width: 0; }\n    .card-head strong, .card-title, .card-line strong, .card-foot { min-width: 0; overflow-wrap: anywhere; word-break: break-word; }\n    .score-pill { flex: 0 0 auto; min-width: 38px; border-radius: 999px; background: #e6f4f1; color: #0f766e; text-align: center; font-size: 13px; font-weight: 900; padding: 3px 8px; }\n    .card-title { margin-top: 8px; color: #17202c; font-weight: 800; line-height: 1.35; }\n    .card-meta { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; margin-top: 10px; }\n    .card-meta span { min-width: 0; border: 1px solid #e5edf6; border-radius: 8px; background: #f8fafc; color: #64748b; font-size: 11px; padding: 7px; }\n    .card-meta strong { display: block; margin-top: 2px; color: #17202c; font-size: 12px; overflow-wrap: anywhere; word-break: break-word; }\n    .card-line { display: grid; grid-template-columns: 64px minmax(0, 1fr); gap: 8px; align-items: start; margin-top: 9px; font-size: 13px; }\n    .card-line span { color: #64748b; }\n    .card-foot { display: flex; justify-content: space-between; gap: 10px; margin-top: 10px; color: #64748b; font-size: 12px; }\n    @media (max-width: 860px) { .metrics, .grid { grid-template-columns: 1fr; } h1 { font-size: 23px; } }\n    @media (max-width: 560px) {\n      .page { width: 100%; max-width: 100%; padding: 14px 10px 40px; }\n      .hero, .metric, .overview-card { width: 100%; max-width: 100%; }\n      .hero, .metric { padding: 14px; }\n      .panel { padding: 0; border: 0; background: transparent; box-shadow: none; }\n      .panel h2 { margin: 0 0 10px; font-size: 16px; }\n      .metrics { width: 100%; max-width: 100%; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 8px; }\n      .metric { min-height: 78px; }\n      .metric strong { font-size: 20px; }\n      .log-links { display: grid; grid-template-columns: minmax(0, 1fr); }\n      .log-links a { text-align: center; }\n      .source-health-head { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: start; }\n      .source-chip-list { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }\n      .source-chip { border-radius: 8px; justify-content: space-between; }\n      .check-head { display: grid; grid-template-columns: minmax(0, 1fr) auto; }\n      .check-note { display: grid; grid-template-columns: minmax(0, 1fr); }\n      .check-links { display: grid; grid-template-columns: minmax(0, 1fr); }\n      .check-links a, .check-links span { text-align: center; border-radius: 8px; }\n      .check-details summary::after { float: none; display: block; margin-top: 4px; }\n      .segmented { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); }\n      .view-button { width: 100%; }\n      .desktop-table { display: none; }\n      .mobile-card-list { display: grid; grid-template-columns: minmax(0, 1fr); gap: 9px; }\n      .hero p, .muted, .footer, .card-title, .card-line strong { overflow-wrap: anywhere; word-break: break-all; }\n      .card-foot { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; }\n    }\n  </style>\n</head>\n<body>\n  <main class=\"page\">\n    <section class=\"hero\">\n      <div class=\"kicker\">AI 选品批量总览看板</div>\n      <h1>候选商品池总览</h1>\n      <p>生成时间：${htmlEscape(generatedAt)}。数据来自本地 CSV 历史记录，用于快速排序、复核风险和安排下一步动作。</p>\n      <p class=\"overview-boundary\">数据边界：本看板汇总本地 CSV、单品报告证据和低频竞品快照；Keepa、SP-API、Amazon Ads API 未接入时，不代表 Amazon 官方销售、库存或广告市场数据。</p>\n      ${overviewSourceHealthHtml()}\n    </section>\n\n    <section class=\"metrics\">\n      <article class=\"metric\"><span>历史记录</span><strong>${normalized.length}</strong></article>\n      <article class=\"metric\"><span>去重候选</span><strong>${deduped.length}</strong></article>\n      <article class=\"metric\"><span>平均分</span><strong>${avgScore || '暂无'}</strong></article>\n      <article class=\"metric\"><span>可验证候选</span><strong>${ready}</strong></article>\n      <article class=\"metric\"><span>需复核/暂缓</span><strong>${review + hold}</strong></article>\n      <article class=\"metric\"><span>竞品已验</span><strong>${competitorVerified}</strong><div class=\"footer\">平均覆盖 ${avgCompetitorCoverage || 0}%</div></article>\n      <article class=\"metric\"><span>待验竞品</span><strong>${competitorPending}</strong></article>\n    </section>\n\n    ${localRegressionHtml()}\n\n    <section class=\"panel verification-workbench\" data-verification-workbench data-default-view=\"unverified\">\n      <h2>竞品验证工作台</h2>\n      ${snapshotLogLinks()}\n      <div class=\"segmented\" role=\"tablist\" aria-label=\"竞品验证视图\">\n        <button class=\"view-button is-active\" type=\"button\" data-view-button=\"unverified\">仅看未验证</button>\n        <button class=\"view-button\" type=\"button\" data-view-button=\"recent\">按验证时间</button>\n      </div>\n      <div class=\"view-panel\" data-view-panel=\"unverified\">\n        ${verificationCardList(unverifiedCandidates)}\n        ${rawTable(['分数', 'ASIN', '商品', '竞品覆盖', '状态', '下一步', '报告'], unverifiedRows)}\n      </div>\n      <div class=\"view-panel\" data-view-panel=\"recent\" hidden>\n        ${verificationCardList(verificationSorted)}\n        ${rawTable(['验证时间', '竞品覆盖', '状态', '分数', 'ASIN', '商品', '下一步', '报告'], verificationRows)}\n      </div>\n    </section>\n\n    <section class=\"grid\">\n      <div>\n        <article class=\"panel\">\n          <h2>去重候选池</h2>\n          ${overviewCardList(deduped, 'action')}\n          ${rawTable(['分数', '结论', 'ASIN', '商品', '净利率', '竞品覆盖', '下一步', '最新时间', '报告'], dedupRows)}\n        </article>\n        <article class=\"panel\">\n          <h2>历史候选排序</h2>\n          ${overviewCardList(sortedByScore, 'risk')}\n          ${rawTable(['分数', '结论', 'ASIN', '商品', '净利率', '竞品覆盖', '风险', '报告'], candidateRows)}\n        </article>\n        <article class=\"panel\">\n          <h2>最近运行</h2>\n          ${latestCardList(sortedByTime)}\n          ${rawTable(['时间', '分数', 'ASIN', '商品', '竞品快照', '下一步动作'], latestRows)}\n        </article>\n      </div>\n      <aside>\n        <article class=\"panel\">\n          <h2>竞品快照状态</h2>\n          ${snapshotLogLinks()}\n          ${competitorCardList(deduped.slice(0, 8))}\n          ${rawTable(['ASIN', '商品', '覆盖', '状态', '更新时间'], competitorStatusRows)}\n        </article>\n        <article class=\"panel\">\n          <h2>风险排行</h2>\n          ${riskCardList(riskRows)}\n          ${rawTable(['风险', '次数'], riskRows)}\n        </article>\n        <article class=\"panel\">\n          <h2>使用说明</h2>\n          <p class=\"muted\">这是 V1.0 的批量总览雏形。当前按 CSV 历史记录汇总，已读取单品报告中的竞品快照证据。</p>\n          <div class=\"footer\">外部数据源未接入时，Keepa、SP-API、Ads API 不影响此看板生成，也不会参与分数或结论。</div>\n        </article>\n      </aside>\n    </section>\n  </main>\n  <script>\n    (() => {\n      const root = document.querySelector('[data-verification-workbench]');\n      if (!root) return;\n      const buttons = Array.from(root.querySelectorAll('[data-view-button]'));\n      const panels = Array.from(root.querySelectorAll('[data-view-panel]'));\n      const activate = (view) => {\n        buttons.forEach((button) => button.classList.toggle('is-active', button.dataset.viewButton === view));\n        panels.forEach((panel) => {\n          panel.hidden = panel.dataset.viewPanel !== view;\n        });\n      };\n      buttons.forEach((button) => {\n        button.addEventListener('click', () => activate(button.dataset.viewButton));\n      });\n      activate(root.dataset.defaultView || 'unverified');\n    })();\n  </script>\n</body>\n</html>`;\n}\n\nfs.mkdirSync(reportDir, { recursive: true });\n\nconst headers = [\n  'created_at',\n  'asin',\n  'product_url',\n  'product_title',\n  'price',\n  'rating',\n  'reviews',\n  'product_summary',\n  'competitive_analysis',\n  'pricing_strategy',\n  'listing_improvement',\n  'html_report',\n  'notes',\n  'recommendation_score',\n  'decision',\n  'score_breakdown_json',\n  'evidence_json',\n  'risk_flags_json',\n  'next_actions_json',\n  'data_sources_json',\n  'marketplace',\n  'target_keywords',\n  'competitor_asins',\n  'landed_cost',\n  'target_price',\n  'shipping_cost',\n  'platform_fee_rate',\n  'platform_fee',\n  'fulfillment_fee',\n  'ad_cost_estimate',\n  'ad_budget_hint',\n];\n\nensureCsvHeader(csvFile, headers);\n\nconst details = getNodeJson('Extract Product Details');\nconst input = getNodeJson('Set the Input Fields');\nconst rows = [];\nconst reports = [];\n\nfor (const item of $input.all()) {\n  const aggregate = item.json.output ?? item.json;\n  const parts = flattenOutput(aggregate);\n  const objects = collectObjects(parts);\n  const insight = findObject(\n    objects,\n    (object) => object.product_insights || object.recommendations || (object.summary && typeof object.summary === 'object'),\n  );\n  const recommendations = insight.recommendations || findObject(objects, (object) => object.pricing_strategy || object.listing_quality_improvements);\n  const bestValue = insight.product_insights?.best_value_item || {};\n\n  const createdAt = new Date().toISOString();\n  const asin = firstUseful(details.asin, bestValue.asin, insight.asin);\n  const productUrl = firstUseful(details.product_url, input.product_url);\n  const productTitle = firstUseful(details.title, input.product_title);\n  const brand = firstUseful(details.brand);\n  const price = firstUseful(details.price_hint, bestValue.price);\n  const rating = firstUseful(details.rating_hint, insight.product_insights?.rating_insights);\n  const reviews = firstUseful(details.reviews_hint, bestValue.reviews, insight.product_insights?.reviews_hint);\n  const availability = cleanAvailability(details.availability);\n  const image = firstUseful(details.image);\n  const category = Array.isArray(details.breadcrumbs) && details.breadcrumbs.length ? details.breadcrumbs.join(' / ') : '暂无数据';\n  const summary = paragraph(findString(objects, 'summary'));\n  const competitiveAnalysis = paragraph(findString(objects, 'competitive_analysis'));\n  const pricingStrategy = paragraph(recommendations.pricing_strategy);\n  const listingImprovement = paragraph(recommendations.listing_quality_improvements);\n  const rawPageText = oneLine(details.raw_page_text);\n  const pageLooksBlocked =\n    /captcha|robot check|automated access|enter the characters you see below|click the button below to continue shopping|continue shopping/i.test(\n      rawPageText,\n    );\n  const notes = paragraph(\n    pageLooksBlocked\n      ? 'Amazon 当前返回了 Continue shopping、验证码或机器人检测页面；这是免费本地爬虫的限制，建议稍后重试、降低频率或更换商品链接验证。'\n      : details.extraction_note || insight.metadata?.image_quality_notes,\n  );\n  const bullets = Array.isArray(details.bullets) ? details.bullets : [];\n  const productDetails = Array.isArray(details.product_details) ? details.product_details : [];\n  const blocked =\n    !!details.blocked ||\n    pageLooksBlocked ||\n    /^Amazon\\.[a-z.]+$/i.test(productTitle) ||\n    (productTitle === 'Amazon.in' && price === '暂无数据' && rating === '暂无数据' && reviews === '暂无数据');\n\n  const priceNumber = toNumber(details.price_number || price);\n  const ratingNumber = toNumber(details.rating_number || rating);\n  const reviewsNumber = toNumber(details.reviews_number || reviews);\n\n  const summarySections = sectionize(summary, ['产品定位', '核心卖点', '主要规格或功能', '适合人群', '潜在风险']);\n  const competitiveSections = sectionize(competitiveAnalysis, [\n    '市场定位',\n    '主要竞争优势',\n    '竞争优势',\n    '可能的劣势和转化风险',\n    '劣势和转化风险',\n    '适合的标题、五点描述和广告角度',\n    '标题、五点描述和广告角度',\n    '给跨境卖家的选品建议',\n    '跨境卖家选品建议',\n  ]);\n  const riskText =\n    summarySections.find((section) => section.label === '潜在风险')?.text ||\n    competitiveSections.find((section) => section.label.includes('风险'))?.text ||\n    '暂无数据';\n\n  const manual = {\n    marketplace: firstUseful(input.marketplace, details.marketplace),\n    targetKeywords: parseList(input.target_keywords),\n    competitorAsins: parseList(input.competitor_asins),\n    landedCost: toNumber(input.landed_cost),\n    targetPrice: toNumber(input.target_price),\n    shippingCost: toNumber(input.shipping_cost),\n    platformFeeRate: firstUseful(input.platform_fee_rate),\n    platformFee: toNumber(input.platform_fee),\n    fulfillmentFee: toNumber(input.fulfillment_fee),\n    adCostEstimate: toNumber(input.ad_cost_estimate),\n    adBudgetHint: firstUseful(input.ad_budget_hint),\n    notes: firstUseful(input.notes),\n  };\n  manual.hasAny =\n    manual.marketplace !== '暂无数据' ||\n    manual.targetKeywords.length > 0 ||\n    manual.competitorAsins.length > 0 ||\n    manual.landedCost > 0 ||\n    manual.targetPrice > 0 ||\n    manual.shippingCost > 0 ||\n    manual.platformFeeRate !== '暂无数据' ||\n    manual.platformFee > 0 ||\n    manual.fulfillmentFee > 0 ||\n    manual.adCostEstimate > 0 ||\n    manual.adBudgetHint !== '暂无数据' ||\n    manual.notes !== '暂无数据';\n\n  const model = buildDecisionModel({\n    blocked,\n    price,\n    rating,\n    reviews,\n    availability,\n    priceNumber,\n    ratingNumber,\n    reviewsNumber,\n    bullets,\n    productDetails,\n    summary,\n    competitiveAnalysis,\n    riskText,\n    manual,\n  });\n  const score = model.score;\n  const status = decisionLabel(score, blocked);\n  const focusPoints = buildFocusPoints({ price, rating, reviews, availability, ratingNumber, reviewsNumber, blocked });\n  const profitDetail = buildProfitDetail({ manual, priceNumber });\n  const competitorSnapshot = loadCompetitorSnapshot(manual.competitorAsins, manual.marketplace, asin);\n  const riskFlags = buildRiskFlags({ blocked, ratingNumber, reviewsNumber, priceNumber, riskText, manual, profitDetail, competitorSnapshot });\n  const nextActions = buildNextActions({ blocked, manual, score, profitDetail, competitorSnapshot });\n  const dataSources = buildDataSources({ blocked, manual, competitorSnapshot });\n  const profitRows = buildProfitRows(profitDetail);\n  const competitorRows = buildCompetitorRows(manual.competitorAsins, competitorSnapshot);\n  const evidence = {\n    page: {\n      asin,\n      product_url: productUrl,\n      title: productTitle,\n      brand,\n      price,\n      rating,\n      reviews,\n      availability,\n      category,\n      bullet_count: bullets.length,\n      detail_count: productDetails.length,\n      blocked,\n    },\n    manual_inputs: {\n      marketplace: manual.marketplace,\n      target_keywords: manual.targetKeywords,\n      competitor_asins: manual.competitorAsins,\n      landed_cost: manual.landedCost || null,\n      target_price: manual.targetPrice || null,\n      shipping_cost: manual.shippingCost || null,\n      platform_fee_rate: manual.platformFeeRate,\n      platform_fee: manual.platformFee || null,\n      fulfillment_fee: manual.fulfillmentFee || null,\n      ad_cost_estimate: manual.adCostEstimate || null,\n      ad_budget_hint: manual.adBudgetHint,\n      notes: manual.notes,\n    },\n    profit_estimate: profitDetail,\n    competitor_snapshot: competitorSnapshot,\n    competitor_status: competitorRows.map((row) => ({\n      order: row[0],\n      asin: row[1],\n      status: row[2],\n      price: row[3],\n      rating: row[4],\n      reviews: row[5],\n      note: row[6],\n    })),\n    ai_outputs: {\n      summary_available: summary !== '暂无数据',\n      competitive_analysis_available: competitiveAnalysis !== '暂无数据',\n      pricing_strategy_available: pricingStrategy !== '暂无数据',\n      listing_improvement_available: listingImprovement !== '暂无数据',\n    },\n    data_source_config: {\n      file: dataSourcesConfigFile,\n      status: dataSourceStatusByKey(dataSources, 'data_source_config', '配置缺失'),\n      last_checked_at: dataSources.find((source) => source.key === 'data_source_config')?.meta?.last_checked_at || '暂无数据',\n      owner_notes: dataSources.find((source) => source.key === 'data_source_config')?.meta?.owner_notes || '暂无数据',\n    },\n    data_source_details: dataSources.map((source) => ({\n      key: source.key,\n      label: source.label,\n      status: source.status,\n      detail: source.detail,\n      last_checked_at: source.meta?.last_checked_at || '暂无数据',\n      owner_notes: source.meta?.owner_notes || '暂无数据',\n    })),\n    optional_sources: {\n      keepa: dataSourceStatusByKey(dataSources, 'keepa'),\n      sp_api_brand_analytics: dataSourceStatusByKey(dataSources, 'sp_api'),\n      amazon_ads_api: dataSourceStatusByKey(dataSources, 'amazon_ads_api'),\n    },\n    extraction_note: notes,\n  };\n  const scoreBreakdownJson = JSON.stringify(model.breakdown);\n  const evidenceJson = JSON.stringify(evidence);\n  const riskFlagsJson = JSON.stringify(riskFlags);\n  const nextActionsJson = JSON.stringify(nextActions);\n  const dataSourcesJson = JSON.stringify(dataSources);\n\n  const safeAsin = asin === '暂无数据' ? 'unknown' : asin.replace(/[^A-Za-z0-9_-]/g, '');\n  const stamp = createdAt.replace(/[:.]/g, '-');\n  const reportFilename = `amazon_product_analysis_${safeAsin}_${stamp}.html`;\n  const reportFile = reportDir + '/' + reportFilename;\n  const reportFileWindows = pathForWindowsReport(reportFilename);\n  const latestHtmlWindows = windowsOutputDir.replace(/[\\\\/]+$/, '') + '\\\\amazon_product_analysis_latest.html';\n\n  const ratingWidth = ratingNumber > 0 ? (ratingNumber / 5) * 100 : 6;\n  const reviewWidth = reviewsNumber > 0 ? clamp((Math.log10(reviewsNumber + 1) / 5) * 100, 8, 100) : 6;\n  const priceWidth = priceNumber > 0 ? clamp((Math.log10(priceNumber + 1) / 5) * 100, 12, 100) : 6;\n  const bubbleLeft = ratingNumber > 0 ? clamp((ratingNumber / 5) * 100, 8, 92) : 50;\n  const bubbleTop = reviewsNumber > 0 ? 100 - clamp((Math.log10(reviewsNumber + 1) / 5) * 100, 10, 90) : 62;\n  const mobileTitle = shorten(productTitle, 58);\n  const primaryRisk = riskFlags[0] || { label: '暂无风险', text: '暂无关键风险' };\n  const primaryAction = nextActions[0] || { label: '暂无动作', text: '暂无下一步动作' };\n  const competitorSnapshotNote =\n    competitorSnapshot?.rows?.length > 0\n      ? `${competitorSnapshot.success_count}/${competitorSnapshot.rows.length} 已抓取`\n      : '未提供竞品';\n  const mobileCategory = shorten(category, 44);\n\n  const html = `<!doctype html>\n<html lang=\"zh-CN\">\n<head>\n  <meta charset=\"utf-8\">\n  <meta name=\"viewport\" content=\"width=device-width, initial-scale=1\">\n  <title>Amazon 商品情报分析 - ${htmlEscape(asin)}</title>\n  <style>\n    :root {\n      --bg: #f5f7fb;\n      --ink: #17202c;\n      --sub: #5f6b7a;\n      --line: #dce3ee;\n      --panel: #ffffff;\n      --teal: #0f766e;\n      --blue: #2563eb;\n      --amber: #b45309;\n      --red: #b42318;\n      --green: #047857;\n      --shadow: 0 16px 34px rgba(20, 32, 44, 0.08);\n    }\n    * { box-sizing: border-box; }\n    html, body { max-width: 100%; overflow-x: hidden; }\n    body {\n      margin: 0;\n      background:\n        linear-gradient(180deg, #eef3fb 0, #f8fafc 360px, var(--bg) 100%);\n      color: var(--ink);\n      font-family: \"Microsoft YaHei\", \"PingFang SC\", Arial, sans-serif;\n      line-height: 1.55;\n    }\n    .page { width: min(1180px, calc(100% - 32px)); margin: 0 auto; padding: 24px 0 40px; }\n    .hero {\n      display: grid;\n      grid-template-columns: minmax(0, 1.35fr) minmax(280px, 0.65fr);\n      gap: 18px;\n      align-items: stretch;\n      margin-bottom: 16px;\n    }\n    .panel, .metric, .mini-card, .text-panel, .focus {\n      background: var(--panel);\n      border: 1px solid var(--line);\n      border-radius: 8px;\n      box-shadow: var(--shadow);\n    }\n    .intro { padding: 22px; }\n    .kicker { color: var(--teal); font-size: 13px; font-weight: 800; margin-bottom: 8px; }\n    h1 { margin: 0 0 12px; font-size: 28px; line-height: 1.28; letter-spacing: 0; overflow-wrap: anywhere; word-break: break-word; }\n    h2 { margin: 0 0 12px; font-size: 18px; line-height: 1.35; }\n    p { margin: 0; color: #263341; overflow-wrap: anywhere; }\n    .meta { display: flex; flex-wrap: wrap; gap: 8px; color: var(--sub); font-size: 13px; }\n    .meta span, .decision, .product-mini, li { min-width: 0; overflow-wrap: anywhere; }\n    .badge {\n      display: inline-flex;\n      align-items: center;\n      min-height: 28px;\n      padding: 4px 10px;\n      border-radius: 6px;\n      font-weight: 800;\n      background: #eef6f5;\n      color: var(--teal);\n    }\n    .badge.good { background: #ecfdf5; color: var(--green); }\n    .badge.mid { background: #eff6ff; color: var(--blue); }\n    .badge.warn { background: #fff7ed; color: var(--amber); }\n    .score-line { display: flex; align-items: center; gap: 14px; margin-top: 18px; }\n    .score-ring {\n      width: 86px;\n      aspect-ratio: 1;\n      display: grid;\n      place-items: center;\n      border-radius: 50%;\n      background: conic-gradient(var(--teal) ${score * 1}%, #e6edf5 0);\n      position: relative;\n      flex: 0 0 auto;\n    }\n    .score-ring::after { content: \"\"; position: absolute; inset: 9px; border-radius: 50%; background: #fff; }\n    .score-ring strong { position: relative; z-index: 1; font-size: 24px; }\n    .decision strong { display: block; font-size: 18px; margin-bottom: 4px; }\n    .decision span { color: var(--sub); font-size: 13px; }\n    .focus { margin-top: 16px; padding: 14px 16px; box-shadow: none; }\n    .focus-title { font-weight: 800; margin-bottom: 8px; }\n    .decision-board { margin-top: 16px; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }\n    .board-card {\n      border: 1px solid var(--line);\n      border-radius: 8px;\n      background: #fbfdff;\n      padding: 14px;\n      min-height: 132px;\n    }\n    .board-card h2 { font-size: 15px; margin-bottom: 8px; color: var(--ink); }\n    .board-card ul { font-size: 13px; }\n    .board-card li { margin: 4px 0; }\n    ul { margin: 0; padding-left: 18px; }\n    li { margin: 5px 0; }\n    .visual { padding: 18px; overflow: hidden; }\n    .perspective { perspective: 1100px; min-height: 100%; display: grid; align-items: center; }\n    .product-card {\n      min-width: 0;\n      min-height: 310px;\n      transform: rotateY(-8deg) rotateX(2deg);\n      transform-origin: center;\n      border: 1px solid #d8e1ec;\n      border-radius: 8px;\n      background: linear-gradient(145deg, #fff, #eef5fb);\n      box-shadow: 20px 22px 34px rgba(21, 40, 72, 0.14);\n      padding: 18px;\n      display: grid;\n      grid-template-rows: 1fr auto;\n      gap: 14px;\n    }\n    .product-image {\n      width: 100%;\n      height: 220px;\n      object-fit: contain;\n      display: block;\n      background: #fff;\n      border-radius: 8px;\n      border: 1px solid #e5ebf3;\n    }\n    .image-fallback {\n      height: 220px;\n      display: grid;\n      place-items: center;\n      color: var(--sub);\n      background: #fff;\n      border-radius: 8px;\n      border: 1px dashed #c9d4e3;\n    }\n    .product-mini { font-size: 13px; color: var(--sub); }\n    .metric-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin: 14px 0; }\n    .metric { padding: 15px; min-height: 96px; box-shadow: 0 8px 20px rgba(20, 32, 44, 0.05); }\n    .metric-label { color: var(--sub); font-size: 13px; margin-bottom: 8px; }\n    .metric-value { font-size: 18px; font-weight: 900; overflow-wrap: anywhere; }\n    .metric-note { color: var(--sub); font-size: 12px; margin-top: 6px; }\n    .dashboard { display: grid; grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr); gap: 14px; margin-bottom: 14px; }\n    .bars { padding: 18px; }\n    .bar-row + .bar-row { margin-top: 16px; }\n    .bar-head { display: flex; justify-content: space-between; gap: 12px; color: var(--sub); font-size: 13px; margin-bottom: 7px; }\n    .bar-head strong { color: var(--ink); }\n    .bar-track { height: 10px; background: #e7edf5; border-radius: 999px; overflow: hidden; }\n    .bar-track span { display: block; height: 100%; background: var(--teal); border-radius: inherit; }\n    .bar-track .blue { background: var(--blue); }\n    .bar-track .amber { background: var(--amber); }\n    .breakdown { display: grid; gap: 12px; }\n    .source-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(170px, 1fr)); gap: 10px; margin-top: 10px; }\n    .source-note { margin: 6px 0 12px; color: var(--sub); font-size: 13px; line-height: 1.6; overflow-wrap: anywhere; word-break: break-word; }\n    .source-card {\n      border: 1px solid var(--line);\n      border-radius: 8px;\n      background: #f8fafc;\n      padding: 12px;\n      min-height: 108px;\n    }\n    .source-card.on { background: #ecfdf5; border-color: #bbf7d0; }\n    .source-card.warn { background: #fff7ed; border-color: #fed7aa; }\n    .source-card strong { display: block; font-size: 13px; margin-bottom: 5px; }\n    .source-card span { display: inline-flex; color: var(--teal); font-weight: 900; font-size: 12px; margin-bottom: 7px; }\n    .source-card.warn span { color: var(--amber); }\n    .source-card p { color: var(--sub); font-size: 12px; }\n    .table-wrap { width: 100%; overflow-x: auto; border: 1px solid var(--line); border-radius: 8px; background: #fff; }\n    table { width: 100%; border-collapse: collapse; font-size: 13px; }\n    th, td { padding: 10px 12px; text-align: left; border-bottom: 1px solid var(--line); vertical-align: top; }\n    th { color: var(--sub); background: #f8fafc; font-weight: 900; }\n    tr:last-child td { border-bottom: 0; }\n    .matrix { padding: 18px; }\n    .matrix-box {\n      position: relative;\n      height: 220px;\n      border: 1px solid var(--line);\n      border-radius: 8px;\n      background:\n        linear-gradient(90deg, transparent calc(50% - 1px), #dce3ee 0, #dce3ee calc(50% + 1px), transparent 0),\n        linear-gradient(0deg, transparent calc(50% - 1px), #dce3ee 0, #dce3ee calc(50% + 1px), transparent 0),\n        linear-gradient(135deg, #fff, #f0f7f6);\n      overflow: hidden;\n    }\n    .quad { position: absolute; color: #6b7787; font-size: 12px; font-weight: 700; }\n    .q1 { top: 10px; right: 12px; }\n    .q2 { top: 10px; left: 12px; }\n    .q3 { bottom: 10px; left: 12px; }\n    .q4 { bottom: 10px; right: 12px; }\n    .bubble {\n      position: absolute;\n      left: ${bubbleLeft.toFixed(1)}%;\n      top: ${bubbleTop.toFixed(1)}%;\n      transform: translate(-50%, -50%);\n      width: 18px;\n      aspect-ratio: 1;\n      border-radius: 50%;\n      background: var(--teal);\n      box-shadow: 0 0 0 8px rgba(15, 118, 110, 0.16);\n    }\n    .axis { color: var(--sub); font-size: 12px; margin-top: 8px; display: flex; justify-content: space-between; }\n    .section-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 14px; margin-top: 14px; }\n    .span-2 { grid-column: 1 / -1; }\n    .mini-card, .text-panel { padding: 16px; box-shadow: 0 8px 20px rgba(20, 32, 44, 0.05); }\n    .mini-label { color: var(--teal); font-size: 13px; font-weight: 900; margin-bottom: 8px; }\n    .mini-card p, .text-panel p { font-size: 14px; }\n    .muted { color: var(--sub); }\n    .link { color: var(--blue); word-break: break-all; text-decoration: none; }\n    .mobile-only { display: none; }\n    .mobile-brief { display: none; }\n    details { margin-top: 14px; }\n    summary { cursor: pointer; font-weight: 800; color: var(--blue); }\n    .raw { margin-top: 10px; padding: 14px; background: #f8fafc; border: 1px solid var(--line); border-radius: 8px; }\n    .json-block { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 12px; color: #334155; }\n    .footer { color: var(--sub); font-size: 12px; margin-top: 16px; }\n    @media (max-width: 960px) {\n      .hero, .dashboard, .section-grid, .decision-board { grid-template-columns: 1fr; }\n      .metric-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }\n      .source-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }\n      h1 { font-size: 24px; }\n      .product-card { transform: none; }\n    }\n    @media (max-width: 560px) {\n      body { font-size: 13px; }\n      .page { width: 100%; max-width: 1180px; padding: 14px 10px 40px; }\n      .hero { display: block; width: 100%; max-width: calc(100vw - 20px); }\n      .hero > .panel + .panel { margin-top: 14px; }\n      .intro, .visual, .bars, .matrix, .mini-card, .text-panel { padding: 14px; }\n      .intro, .visual, .panel, .metric, .product-card, .board-card { width: 100%; max-width: calc(100vw - 20px); }\n      h1 { font-size: 18px; line-height: 1.25; overflow-wrap: anywhere; word-break: break-all; }\n      h1, h2, .decision, .product-mini, .link, .metric-value, li, td { max-width: calc(100vw - 48px); overflow-wrap: anywhere; word-break: break-all; }\n      .decision strong { font-size: 16px; }\n      .desktop-title, .desktop-url { display: none; }\n      .mobile-only { display: inline; }\n      .meta { display: grid; grid-template-columns: minmax(0, 1fr); align-items: start; }\n      .metric-grid { grid-template-columns: 1fr; }\n      .source-grid { grid-template-columns: 1fr; }\n      .score-line { display: block; }\n      .score-ring { width: 68px; margin-bottom: 10px; }\n      .decision-board { display: none; }\n      .mobile-brief { display: grid; grid-template-columns: minmax(0, 1fr); gap: 8px; margin-top: 14px; }\n      .brief-card { min-width: 0; overflow: hidden; border: 1px solid var(--line); border-radius: 8px; background: #fbfdff; padding: 10px; }\n      .brief-card span { display: block; color: var(--sub); font-size: 12px; margin-bottom: 4px; }\n      .brief-card strong { display: block; font-size: 14px; line-height: 1.28; }\n      .brief-card strong, .brief-card p, .product-mini strong { max-width: 100%; white-space: normal; overflow-wrap: anywhere; word-break: break-all; }\n      .brief-card p { margin-top: 4px; color: var(--sub); font-size: 12px; line-height: 1.35; }\n      .product-card { min-height: 260px; padding: 12px; }\n      .product-image, .image-fallback { height: 180px; }\n      .matrix-box { height: 190px; }\n    }\n  </style>\n</head>\n<body>\n  <main class=\"page\">\n    <section class=\"hero\">\n      <div class=\"panel intro\">\n        <div class=\"kicker\">AI 选品决策看板</div>\n        <h1><span class=\"desktop-title\">${htmlEscape(productTitle)}</span><span class=\"mobile-only\">${htmlEscape(mobileTitle)}</span></h1>\n        <div class=\"meta\">\n          <span class=\"badge ${decisionClass(status)}\">${htmlEscape(status)}</span>\n          <span>ASIN：${htmlEscape(asin)}</span>\n          <span>品牌：${htmlEscape(brand)}</span>\n          <span>站点：${htmlEscape(manual.marketplace)}</span>\n          <span>生成时间：${htmlEscape(createdAt)}</span>\n        </div>\n        <div class=\"score-line\">\n          <div class=\"score-ring\"><strong>${score}</strong></div>\n          <div class=\"decision\">\n            <strong>选品推荐指数</strong>\n            <span>基于需求、竞争、利润、Listing、口碑、运营复杂度和数据可信度的可解释评分。</span>\n          </div>\n        </div>\n        <div class=\"mobile-brief\">\n          <article class=\"brief-card\">\n            <span>结论</span>\n            <strong>${htmlEscape(status)}</strong>\n            <p>${htmlEscape(score)} / 100</p>\n          </article>\n          <article class=\"brief-card\">\n            <span>首要风险</span>\n            <strong>${htmlEscape(shorten(primaryRisk.label, 18))}</strong>\n            <p>${htmlEscape(shorten(primaryRisk.text, 34))}</p>\n          </article>\n          <article class=\"brief-card\">\n            <span>下一步</span>\n            <strong>${htmlEscape(shorten(primaryAction.label, 18))}</strong>\n            <p>${htmlEscape(shorten(primaryAction.text, 34))}</p>\n          </article>\n          <article class=\"brief-card\">\n            <span>关键证据</span>\n            <strong>竞品快照：${htmlEscape(competitorSnapshot.status)}</strong>\n            <p>${htmlEscape(competitorSnapshotNote)}</p>\n          </article>\n        </div>\n        <div class=\"decision-board\">\n          <article class=\"board-card\">\n            <h2>关键证据</h2>\n            ${listHtml(focusPoints, 4)}\n          </article>\n          <article class=\"board-card\">\n            <h2>关键风险</h2>\n            ${objectListHtml(riskFlags, 4)}\n          </article>\n          <article class=\"board-card\">\n            <h2>下一步动作</h2>\n            ${objectListHtml(nextActions, 4)}\n          </article>\n        </div>\n      </div>\n      <div class=\"panel visual\">\n        <div class=\"perspective\">\n          <div class=\"product-card\">\n            ${image !== '暂无数据' ? `<img class=\"product-image\" src=\"${htmlEscape(image)}\" alt=\"${htmlEscape(productTitle)}\">` : '<div class=\"image-fallback\">暂无商品图片</div>'}\n            <div class=\"product-mini\">\n              <strong><span class=\"desktop-title\">${htmlEscape(category)}</span><span class=\"mobile-only\">${htmlEscape(mobileCategory)}</span></strong><br>\n              <a class=\"link\" href=\"${htmlEscape(productUrl)}\" target=\"_blank\" rel=\"noopener noreferrer\"><span class=\"desktop-url\">${htmlEscape(productUrl)}</span><span class=\"mobile-only\">打开商品链接</span></a>\n            </div>\n          </div>\n        </div>\n      </div>\n    </section>\n\n    <section class=\"metric-grid\">\n      ${metricCard('价格', price, priceNumber ? `提取数值：${priceNumber}` : '暂无价格数值')}\n      ${metricCard('评分', rating, ratingNumber ? `满分 5 分中的 ${ratingNumber}` : '暂无评分数值')}\n      ${metricCard('评论数', reviews, reviewsNumber ? `提取数值：${reviewsNumber}` : '暂无评论数值')}\n      ${metricCard('库存', availability, '来自商品页抓取')}\n    </section>\n\n    <section class=\"panel intro\">\n      <h2>数据来源可信度</h2>\n      <p class=\"source-note\">当前结论优先基于本地免费抓取、手工成本字段和低频竞品快照；Keepa 历史趋势、SP-API 官方销售/库存、Amazon Ads 关键词和广告数据按配置显示，未接入时不参与评分。</p>\n      <div class=\"source-grid\">\n        ${dataSourceHtml(dataSources)}\n      </div>\n    </section>\n\n    <section class=\"dashboard\">\n      <div class=\"panel bars\">\n        <h2>评分拆解</h2>\n        <div class=\"breakdown\">\n          ${model.breakdown.map((item) => bar(item.label, `${Math.round(item.score)}/${item.max}`, (item.score / item.max) * 100, item.key === 'trust' ? 'blue' : item.key === 'profit' ? 'amber' : '')).join('')}\n        </div>\n      </div>\n      <div class=\"panel matrix\">\n        <h2>机会位置</h2>\n        <div class=\"matrix-box\">\n          <span class=\"quad q1\">高口碑 / 高热度</span>\n          <span class=\"quad q2\">低口碑 / 高热度</span>\n          <span class=\"quad q3\">低口碑 / 低热度</span>\n          <span class=\"quad q4\">高口碑 / 低热度</span>\n          <span class=\"bubble\" title=\"当前商品位置\"></span>\n        </div>\n        <div class=\"axis\"><span>评分低</span><span>评分高</span></div>\n      </div>\n    </section>\n\n    <section class=\"section-grid\">\n      <div class=\"panel intro\">\n        <h2>利润估算</h2>\n        ${profitRows.length ? tableHtml(['项目', '金额/比例', '说明'], profitRows) : '<p class=\"muted\">未提供成本或售价，暂无利润估算。</p>'}\n      </div>\n\n      <div class=\"panel intro\">\n        <h2>竞品 ASIN 跟踪</h2>\n        ${competitorRows.length ? tableHtml(['序号', 'ASIN', '快照状态', '价格', '评分', '评论', '说明'], competitorRows) : '<p class=\"muted\">未提供竞品 ASIN，下一轮建议填写 3-5 个同类竞品。</p>'}\n      </div>\n\n      <div class=\"span-2 panel intro\">\n        <h2>商品摘要</h2>\n        <div class=\"section-grid\">\n          ${sectionCards(summarySections, summary, 5)}\n        </div>\n      </div>\n\n      <div class=\"panel intro\">\n        <h2>竞品视角</h2>\n        <div class=\"section-grid\">\n          ${sectionCards(competitiveSections, competitiveAnalysis, 4)}\n        </div>\n      </div>\n\n      <div class=\"panel intro\">\n        <h2>风险与动作</h2>\n        <article class=\"mini-card\">\n          <div class=\"mini-label\">主要风险</div>\n          ${objectListHtml(riskFlags, 5)}\n        </article>\n        <article class=\"mini-card\" style=\"margin-top:12px\">\n          <div class=\"mini-label\">下一步动作</div>\n          ${objectListHtml(nextActions, 5)}\n        </article>\n        <article class=\"mini-card\" style=\"margin-top:12px\">\n          <div class=\"mini-label\">定价建议</div>\n          <p>${htmlEscape(shorten(pricingStrategy, 190))}</p>\n        </article>\n        <article class=\"mini-card\" style=\"margin-top:12px\">\n          <div class=\"mini-label\">Listing 优化</div>\n          <p>${htmlEscape(shorten(listingImprovement, 190))}</p>\n        </article>\n      </div>\n\n      <div class=\"panel intro\">\n        <h2>卖点提取</h2>\n        ${listHtml(bullets, 6)}\n      </div>\n\n      <div class=\"panel intro\">\n        <h2>商品详情</h2>\n        ${listHtml(productDetails, 6)}\n      </div>\n    </section>\n\n    <section class=\"panel intro\">\n      <h2>数据说明</h2>\n      <p>${htmlEscape(notes)}</p>\n      <details>\n        <summary>查看完整 AI 原文</summary>\n        <div class=\"raw\">\n          <p><strong>商品摘要：</strong>${htmlEscape(summary)}</p>\n          <p style=\"margin-top:10px\"><strong>竞品分析：</strong>${htmlEscape(competitiveAnalysis)}</p>\n        </div>\n      </details>\n      <details>\n        <summary>查看结构化证据 JSON</summary>\n        <div class=\"raw json-block\">${htmlEscape(\n          JSON.stringify(\n            {\n              recommendation_score: score,\n              decision: status,\n              score_breakdown: model.breakdown,\n              evidence,\n              risk_flags: riskFlags,\n              next_actions: nextActions,\n              data_sources: dataSources,\n            },\n            null,\n            2,\n          ),\n        )}</div>\n      </details>\n      <div class=\"footer\">本地免费爬虫不使用付费代理和验证码服务；如果 Amazon 返回验证码或屏蔽页面，报告会显示“暂无数据”。</div>\n    </section>\n  </main>\n</body>\n</html>`;\n\n  fs.writeFileSync(reportFile, html, 'utf8');\n  fs.writeFileSync(latestHtml, html, 'utf8');\n\n  rows.push(\n    [\n      createdAt,\n      asin,\n      productUrl,\n      productTitle,\n      price,\n      rating,\n      reviews,\n      summary,\n      competitiveAnalysis,\n      pricingStrategy,\n      listingImprovement,\n      reportFileWindows,\n      notes,\n      score,\n      status,\n      scoreBreakdownJson,\n      evidenceJson,\n      riskFlagsJson,\n      nextActionsJson,\n      dataSourcesJson,\n      manual.marketplace,\n      manual.targetKeywords.join('; '),\n      manual.competitorAsins.join('; '),\n      manual.landedCost || '',\n      manual.targetPrice || '',\n      manual.shippingCost || '',\n      manual.platformFeeRate,\n      manual.platformFee || '',\n      manual.fulfillmentFee || '',\n      manual.adCostEstimate || '',\n      manual.adBudgetHint,\n    ]\n      .map(csvEscape)\n      .join(','),\n  );\n\n  reports.push({\n    asin,\n    product_title: productTitle,\n    score,\n    decision: status,\n    score_breakdown_json: scoreBreakdownJson,\n    evidence_json: evidenceJson,\n    risk_flags_json: riskFlagsJson,\n    next_actions_json: nextActionsJson,\n    html_report_in_container: reportFile,\n    html_report_on_windows: reportFileWindows,\n    latest_html_on_windows: latestHtmlWindows,\n  });\n}\n\nif (!skipCsvAppend && rows.length) {\n  fs.appendFileSync(csvFile, rows.join('\\n') + '\\n', 'utf8');\n}\n\nconst overviewHtmlWindows = windowsOutputDir.replace(/[\\\\/]+$/, '') + '\\\\amazon_product_analysis_overview.html';\ntry {\n  const overviewRecords = csvRecordsFromFile(csvFile);\n  fs.writeFileSync(overviewHtml, buildOverviewReport(overviewRecords), 'utf8');\n  for (const report of reports) {\n    report.overview_html_in_container = overviewHtml;\n    report.overview_html_on_windows = overviewHtmlWindows;\n  }\n} catch (error) {\n  for (const report of reports) {\n    report.overview_error = oneLine(error?.message || error);\n  }\n}\n\nreturn reports.map((report) => ({ json: { saved: true, ...report } }));\n"
+      },
+      "typeVersion": 2
+    },
+    {
+      "id": "08bc5f8e-29ec-4cdb-a722-28e3628380eb",
+      "name": "Merge",
+      "type": "n8n-nodes-base.merge",
+      "position": [
+        528,
+        448
+      ],
+      "parameters": {
+        "numberInputs": 3
+      },
+      "typeVersion": 3.2
+    },
+    {
+      "id": "e53ba49c-aa57-46d3-9355-f9db4935e51f",
+      "name": "Aggregate",
+      "type": "n8n-nodes-base.aggregate",
+      "position": [
+        752,
+        464
+      ],
+      "parameters": {
+        "options": {},
+        "fieldsToAggregate": {
+          "fieldToAggregate": [
+            {
+              "fieldToAggregate": "output"
+            }
+          ]
+        }
+      },
+      "typeVersion": 1
+    },
+    {
+      "id": "45ec1fe6-7461-445e-9236-0a8b29961883",
+      "name": "Sticky Note6",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        464,
+        224
+      ],
+      "parameters": {
+        "color": 7,
+        "width": 784,
+        "height": 576,
+        "content": "## 4. 生成 HTML 可视化报告"
+      },
+      "typeVersion": 1
+    },
+    {
+      "id": "0e8e7966-580f-45ff-bef8-c2550daa9245",
+      "name": "Sticky Note7",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        464,
+        96
+      ],
+      "parameters": {
+        "color": 6,
+        "width": 784,
+        "height": 128,
+        "content": "### 数据导出\n\n这里会生成两个本地文件：\n\n1. HTML 可视化报告：\nC:\\Users\\96259\\Desktop\\AIcoding\\codex02\\AIkuajing\\output\\amazon_product_analysis\\amazon_product_analysis_latest.html\n\n2. CSV 数据备份：\nC:\\Users\\96259\\Desktop\\AIcoding\\codex02\\AIkuajing\\output\\amazon_product_analysis\\amazon_product_analysis.csv"
+      },
+      "typeVersion": 1
+    },
+    {
+      "id": "fb05f3bf-bfbf-4776-89c8-45cd4d3455fc",
+      "name": "Sticky Note8",
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        -576,
+        -80
+      ],
+      "parameters": {
+        "color": 6,
+        "width": 336,
+        "height": 112,
+        "content": "### 自定义数据提取\n\n从 Crawlee + Playwright 返回的结构化页面数据中提取商品信息，再交给阿里百炼生成中文分析。"
+      },
+      "typeVersion": 1
+    }
+  ],
+  "connections": {
+    "Merge": {
+      "main": [
+        [
+          {
+            "node": "Aggregate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate": {
+      "main": [
+        [
+          {
+            "node": "生成 HTML 可视化报告",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Ads": {
+      "main": [
+        [
+          {
+            "node": "Product Insights",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Product Insights": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Competitive Analysis": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 2
+          }
+        ]
+      ]
+    },
+    "Set the Input Fields": {
+      "main": [
+        [
+          {
+            "node": "Crawlee + Playwright 免费抓取 Amazon 页面",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Extract Product Details": {
+      "main": [
+        [
+          {
+            "node": "Product Descriptive Summarizer",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Competitive Analysis",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Structured Output Parser": {
+      "ai_outputParser": [
+        [
+          {
+            "node": "Product Descriptive Summarizer",
+            "type": "ai_outputParser",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Product Descriptive Summarizer": {
+      "main": [
+        [
+          {
+            "node": "Merge",
+            "type": "main",
+            "index": 1
+          }
+        ]
+      ]
+    },
+    "When clicking ‘Execute workflow’": {
+      "main": [
+        [
+          {
+            "node": "Set the Input Fields",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "阿里百炼 Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Product Descriptive Summarizer",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "阿里百炼 Chat Model for Amazon Product Mining": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Product Insights",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "阿里百炼 Chat Model for Competitive Analysis": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "Competitive Analysis",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "生成 HTML 可视化报告": {
+      "main": [
+        []
+      ]
+    },
+    "Crawlee + Playwright 免费抓取 Amazon 页面": {
+      "main": [
+        [
+          {
+            "node": "Extract Product Details",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Extract Ads",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "staticData": null,
+  "meta": null,
+  "pinData": {},
+  "versionId": "932103f9-ec08-4982-80e3-b6faee274e6f",
+  "activeVersionId": null,
+  "versionCounter": 12,
+  "triggerCount": 0,
+  "tags": [],
+  "shared": [
+    {
+      "updatedAt": "2026-05-22T15:35:53.658Z",
+      "createdAt": "2026-05-22T15:35:53.658Z",
+      "role": "workflow:owner",
+      "workflowId": "nRSff4JkGEfBZJJd",
+      "projectId": "9NIABbyONohj2ddg",
+      "project": {
+        "updatedAt": "2026-05-22T14:29:23.188Z",
+        "createdAt": "2026-05-22T14:28:44.778Z",
+        "id": "9NIABbyONohj2ddg",
+        "name": "kairan zhou <962598195@qq.com>",
+        "type": "personal",
+        "icon": null,
+        "description": null,
+        "creatorId": "18d94157-04d2-4d59-bedc-52b8ad70eade"
+      }
+    }
+  ],
+  "versionMetadata": {
+    "name": null,
+    "description": null
+  }
+}

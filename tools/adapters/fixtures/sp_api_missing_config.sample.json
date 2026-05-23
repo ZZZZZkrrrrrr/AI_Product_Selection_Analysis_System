@@ -1,0 +1,42 @@
+{
+  "ok": false,
+  "source": "sp_api",
+  "status": "missing_config",
+  "status_label": "配置缺失",
+  "fetched_at": "2026-05-23T06:50:00+08:00",
+  "cache": {
+    "hit": false,
+    "stale": false,
+    "cache_key": "amazon.in:B0BQXZ11B8:sp_api:sample",
+    "path": "output/amazon_product_analysis/cache/sp_api/amazon.in/B0BQXZ11B8.sample.json",
+    "ttl_hours": 24
+  },
+  "cost": {
+    "billable": false,
+    "unit": "request",
+    "estimated_units": 0,
+    "note": "missing config; no request made"
+  },
+  "data": {},
+  "evidence": [
+    {
+      "label": "sp_api_status",
+      "value": "missing_config",
+      "source": "sp_api_fixture",
+      "confidence": "high"
+    }
+  ],
+  "risk_flags": [
+    {
+      "severity": "medium",
+      "label": "official_data_missing",
+      "text": "SP-API credentials are not configured, so official sales, inventory, and fee data are unavailable."
+    }
+  ],
+  "error": {
+    "code": "MISSING_CONFIG",
+    "message": "Required SP-API credentials are not configured.",
+    "retryable": false
+  },
+  "next_retry_at": null
+}
