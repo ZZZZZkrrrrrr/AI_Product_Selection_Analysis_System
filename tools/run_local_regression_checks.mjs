@@ -271,7 +271,7 @@ function buildSummary(options, steps) {
   const failed = steps.filter((step) => !step.ok);
   const skipped = steps.filter((step) => step.skipped);
   const n8nStatusSummary = summarizeN8nStatusForSummary(steps);
-  return {
+  const summary = {
     ok: failed.length === 0,
     generated_at: new Date().toISOString(),
     summary_path: options.summaryPath,
@@ -297,6 +297,49 @@ function buildSummary(options, steps) {
     },
     steps,
   };
+  summary.operational_readiness = localOperationalReadiness(summary);
+  return summary;
+}
+
+function localOperationalReadiness(summary) {
+  const issues = [];
+  const confirmations = [];
+  const failedCount = Number(summary.counts?.failed || 0);
+  const n8nStatus = summary.n8n_status_summary;
+
+  if (failedCount > 0) issues.push(`本轮有 ${failedCount} 项检查失败`);
+  else confirmations.push('本轮本地回归通过');
+
+  if (n8nStatus) {
+    if (n8nStatus.ok === false) issues.push(`n8n 状态为 ${n8nStatus.status || '异常'}`);
+    else confirmations.push('n8n 页面和本地爬虫可用');
+
+    if (n8nStatus.authorization_ok === true) confirmations.push('n8n API 已授权');
+    else issues.push('n8n API 未授权或未检查');
+  } else {
+    issues.push('n8n 状态未检查');
+  }
+
+  return {
+    ok: issues.length === 0,
+    status: issues.length === 0 ? '可继续使用' : '需关注',
+    status_class: issues.length === 0 ? 'ok' : 'warn',
+    message:
+      issues.length === 0
+        ? '本轮本地回归和 n8n 授权状态正常，可以继续参考。'
+        : '本轮存在需要处理的检查项，建议先修复后再继续使用。',
+    confirmations,
+    issues,
+  };
+}
+
+function attachRegressionOverviewSnapshot(summary) {
+  const result = readJsonIfExists(defaultRegressionOverviewJsonPath);
+  if (!result.exists || !result.data) return summary;
+  if (result.data.operational_readiness) summary.operational_readiness = result.data.operational_readiness;
+  if (result.data.git_status_summary) summary.git_status_summary = result.data.git_status_summary;
+  if (result.data.data_source_health_summary) summary.data_source_health_summary = result.data.data_source_health_summary;
+  return summary;
 }
 
 function htmlEscape(value) {
@@ -350,6 +393,35 @@ function renderHtmlSummary(summary) {
   const statusText = summary.ok ? '通过' : '失败';
   const statusClass = summary.ok ? 'ok' : 'fail';
   const n8nStatus = summary.n8n_status_summary || null;
+  const operationalReadiness = summary.operational_readiness || null;
+  const gitStatus = summary.git_status_summary || null;
+  const operationalPanel = operationalReadiness
+    ? `
+    <section class="panel ops-panel ${htmlEscape(operationalReadiness.status_class || 'muted')}">
+      <div class="ops-head">
+        <div>
+          <strong>运维结论</strong>
+          <p>${htmlEscape(operationalReadiness.message || '暂无运维结论。')}</p>
+        </div>
+        <b>${htmlEscape(operationalReadiness.status || '暂无')}</b>
+      </div>
+      ${
+        Array.isArray(operationalReadiness.confirmations) && operationalReadiness.confirmations.length
+          ? `<div class="ops-facts">${operationalReadiness.confirmations.map((item) => `<span>${htmlEscape(item)}</span>`).join('')}</div>`
+          : ''
+      }
+      ${
+        Array.isArray(operationalReadiness.issues) && operationalReadiness.issues.length
+          ? `<ul class="ops-issues">${operationalReadiness.issues.map((item) => `<li>${htmlEscape(item)}</li>`).join('')}</ul>`
+          : ''
+      }
+      ${
+        gitStatus
+          ? `<p class="ops-note">GitHub 同步：${htmlEscape(gitStatus.status || '暂无')}；待推送 ${htmlEscape(gitStatus.ahead ?? 0)}，待拉取 ${htmlEscape(gitStatus.behind ?? 0)}。</p>`
+          : ''
+      }
+    </section>`
+    : '';
   const n8nPanel = n8nStatus
     ? `
     <section class="panel n8n-panel ${htmlEscape(n8nStatus.status_class || 'muted')}">
@@ -416,6 +488,18 @@ function renderHtmlSummary(summary) {
     .metric span { display: block; color: var(--muted); font-size: 12px; }
     .metric strong { display: block; margin-top: 4px; font-size: 22px; }
     .panel { padding: 14px; margin: 12px 0; }
+    .ops-panel.ok { border-color: #bbf7d0; }
+    .ops-panel.warn { border-color: #fcd34d; background: #fffbeb; }
+    .ops-head { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 12px; align-items: start; }
+    .ops-head strong { display: block; font-size: 16px; }
+    .ops-head b { border-radius: 999px; padding: 5px 10px; background: #f1f5f9; }
+    .ops-panel.ok .ops-head b { background: #dcfce7; color: var(--ok); }
+    .ops-panel.warn .ops-head b { background: #fef3c7; color: var(--skip); }
+    .ops-facts { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 10px; }
+    .ops-facts span { border: 1px solid #dce3ee; border-radius: 999px; background: #f8fafc; color: #475569; padding: 6px 10px; font-size: 12px; font-weight: 800; }
+    .ops-issues { margin: 10px 0 0; padding-left: 20px; color: #7a5c00; }
+    .ops-issues li { margin: 4px 0; overflow-wrap: anywhere; }
+    .ops-note { margin-top: 8px; overflow-wrap: anywhere; }
     .n8n-panel.ok { border-color: #bbf7d0; }
     .n8n-panel.warn { border-color: #fcd34d; background: #fffbeb; }
     .n8n-panel.fail { border-color: #fecaca; background: #fff7f7; }
@@ -440,6 +524,8 @@ function renderHtmlSummary(summary) {
       header { grid-template-columns: 1fr; }
       .badge { text-align: left; }
       .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .ops-head { grid-template-columns: 1fr; }
+      .ops-facts { display: grid; grid-template-columns: minmax(0, 1fr); }
       .n8n-head { grid-template-columns: 1fr; }
       .n8n-facts { display: grid; grid-template-columns: minmax(0, 1fr); }
       .step { grid-template-columns: 1fr; }
@@ -466,6 +552,8 @@ function renderHtmlSummary(summary) {
       <article class="metric"><span>移动宽度</span><strong>${htmlEscape(viewportText)}</strong></article>
       <article class="metric"><span>桌面宽度</span><strong>${htmlEscape(summary.desktop_check ? `${summary.desktop_width}px` : '未检查')}</strong></article>
     </section>
+
+    ${operationalPanel}
 
     ${n8nPanel}
 
@@ -656,6 +744,7 @@ async function main() {
     summary.fail_fast_reason = 'Local regression configuration is invalid.';
     writeSummary(summary);
     summary.regression_overview_refresh = refreshRegressionOverview(options);
+    attachRegressionOverviewSnapshot(summary);
     writeSummary(summary);
     if (options.json) console.log(JSON.stringify(summary, null, 2));
     else printHuman(summary);
@@ -725,6 +814,7 @@ async function main() {
   summary = buildSummary(options, steps);
   writeSummary(summary);
   summary.regression_overview_refresh = refreshRegressionOverview(options);
+  attachRegressionOverviewSnapshot(summary);
   writeSummary(summary);
   if (options.overview) {
     pushMobileLayoutSteps(steps, options, {
@@ -737,6 +827,7 @@ async function main() {
     summary = buildSummary(options, steps);
     writeSummary(summary);
     summary.regression_overview_refresh = refreshRegressionOverview(options);
+    attachRegressionOverviewSnapshot(summary);
     writeSummary(summary);
   }
 

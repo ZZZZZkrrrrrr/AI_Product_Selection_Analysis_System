@@ -5977,3 +5977,48 @@ V1.0 不直接上完整企业级 SP-API/Ads API，因为权限、成本和审核
 1. 尝试用 n8n API 做一次低频、受控的 workflow 只读/触发能力验证，确认授权不仅能读，还能支持自动执行。
 2. 把运维结论同步到 `local_regression_latest.html` 的第一屏。
 3. 增加一个只读命令，专门输出“当前是否可发布/可演示”的短报告。
+
+## 实现迭代 85：本地回归报告第一屏同步运维结论
+
+### 本轮实现依据
+
+- 迭代 83 已经让统一回归总览具备“运维结论”，但用户日常首先打开的也可能是 `local_regression_latest.html`。
+- V1.0 的非技术运维入口应该在单次回归报告第一屏也回答“现在能不能继续用”。
+- 本轮只增强本地回归 HTML 展示和布局检查，不触发 n8n workflow，不改变商品分析主链路。
+
+### 本轮改动
+
+- `tools/run_local_regression_checks.mjs`
+  - `buildSummary()` 增加本地 `operational_readiness`。
+  - 在刷新统一回归总览后读取 `local_regression_overview.json`，同步更完整的 `operational_readiness`、`git_status_summary` 和 `data_source_health_summary`。
+  - `local_regression_latest.html` 第一屏新增“运维结论”面板，显示“可继续使用 / 需关注”、依据、问题和 GitHub 同步摘要。
+- `tools/check_regression_summary_mobile_layout.mjs`
+  - 增加本地回归报告“运维结论”面板、依据标签和结论文案的布局检查。
+- `README_AI选品分析系统.md`
+  - 补充说明本地回归报告第一屏会显示运维结论，并在总览刷新后同步更完整状态。
+
+### 本轮验证
+
+- `node --check tools/run_local_regression_checks.mjs` 通过。
+- `node --check tools/check_regression_summary_mobile_layout.mjs` 通过。
+- `node tools/run_local_regression_checks.mjs --desktop --strict-n8n-api` 通过：
+  - `13` 项检查，`12` 通过，`1` 跳过，`0` 失败。
+  - n8n 状态为“正常”，API 已授权，crawler `HTTP 200`。
+- `local_regression_latest.json` 已包含：
+  - `operational_readiness`
+  - `git_status_summary`
+- `local_regression_latest.html` 已显示：
+  - `运维结论`
+  - `GitHub 同步`
+  - `可继续使用 / 需关注` 状态文案
+
+### 本轮剩余风险
+
+- 本地回归报告的运维结论在第一次写入时只基于本轮检查和 n8n 状态；最终写入会在统一回归总览刷新后补齐 GitHub 和数据源信息。
+- 如果用户使用 `--no-overview`，本地回归报告会保留本轮检查级别的结论，不会同步统一总览结论。
+
+### 下一轮实现建议
+
+1. 尝试用 n8n API 做一次低频、受控的 workflow 只读/触发能力验证，确认授权不仅能读，还能支持自动执行。
+2. 增加一个只读命令，专门输出“当前是否可发布/可演示”的短报告。
+3. 把 `cross_border_dashboard/` 的归属判断清楚：如果是本项目新 UI，则纳入版本；如果是实验产物，则加入忽略规则。

@@ -215,6 +215,8 @@ function metricsExpression() {
     const visibleHeader = isVisible(document.querySelector('header h1'));
     const visibleBadge = isVisible(document.querySelector('.badge'));
     const visibleMetrics = Array.from(document.querySelectorAll('.metric')).filter(isVisible).length;
+    const visibleOpsPanel = isVisible(document.querySelector('.ops-panel'));
+    const visibleOpsFacts = Array.from(document.querySelectorAll('.ops-facts span')).filter(isVisible).length;
     const visibleN8nPanel = isVisible(document.querySelector('.n8n-panel'));
     const visibleN8nFacts = Array.from(document.querySelectorAll('.n8n-facts span')).filter(isVisible).length;
     const visibleEntryPanel = Array.from(document.querySelectorAll('.panel')).filter(isVisible).some((el) => String(el.textContent || '').includes('文件入口'));
@@ -247,6 +249,8 @@ function metricsExpression() {
       visibleHeader,
       visibleBadge,
       visibleMetrics,
+      visibleOpsPanel,
+      visibleOpsFacts,
       visibleN8nPanel,
       visibleN8nFacts,
       visibleEntryPanel,
@@ -254,6 +258,7 @@ function metricsExpression() {
       visibleSteps,
       visiblePreBlocks,
       hasApiStatusText: textIncludes('API 未授权') || textIncludes('API 已授权') || textIncludes('API HTTP'),
+      hasOperationalReadinessText: textIncludes('运维结论') && (textIncludes('可继续使用') || textIncludes('需关注')),
       hasCrawlerStatusText: textIncludes('爬虫 HTTP 200') || textIncludes('crawler'),
       hasCredentialHint: textIncludes('N8N_API_KEY') || textIncludes('saved_windows_credential') || textIncludes('已保存的 Windows 凭据') || textIncludes('API key source'),
       overflowingNodes
@@ -269,6 +274,9 @@ function buildChecks(metrics) {
     { name: 'header visible', ok: metrics.visibleHeader === true },
     { name: 'status badge visible', ok: metrics.visibleBadge === true },
     { name: 'summary metrics visible', ok: metrics.visibleMetrics >= 5 },
+    { name: 'operational readiness panel visible', ok: metrics.visibleOpsPanel === true },
+    { name: 'operational readiness facts visible', ok: metrics.visibleOpsFacts >= 2 },
+    { name: 'operational readiness text visible', ok: metrics.hasOperationalReadinessText === true },
     { name: 'n8n status panel visible', ok: metrics.visibleN8nPanel === true },
     { name: 'n8n status facts visible', ok: metrics.visibleN8nFacts >= 4 },
     { name: 'n8n API status text visible', ok: metrics.hasApiStatusText === true },
@@ -383,6 +391,7 @@ function printHuman(result) {
   lines.push(`- horizontal overflow: ${result.metrics.hasHorizontalOverflow ? 'yes' : 'no'}`);
   lines.push(`- header visible: ${result.metrics.visibleHeader ? 'yes' : 'no'}`);
   lines.push(`- summary metrics: ${result.metrics.visibleMetrics}`);
+  lines.push(`- operational readiness visible: ${result.metrics.visibleOpsPanel ? 'yes' : 'no'}`);
   lines.push(`- n8n panel visible: ${result.metrics.visibleN8nPanel ? 'yes' : 'no'}`);
   lines.push(`- n8n facts: ${result.metrics.visibleN8nFacts}`);
   lines.push(`- artifact links: ${result.metrics.visibleLinks}`);
